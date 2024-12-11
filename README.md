@@ -309,7 +309,28 @@ Jika pemeriksaan menunjukkan nol nilai hilang, dataset dianggap siap untuk tahap
 |  13 | description    | 50872 non-null | object  |
 |  14 | tags           | 50872 non-null | object  |
 
-Dataset `final_games` dan `games_metadata` yang sudah di gabungkan terdiri dari 14 fitur dengan struktur kompleks yang mencakup 4 fitur categorical (title, date_release, rating, description, tags), 6 fitur numerical (app_id, positive_ratio, user_reviews, price_final, price_original, discount), dan 4 fitur boolean untuk platform game (win, mac, linux, steam_deck). Com total 50.872 entri yang memiliki kelengkapan data 100% tanpa missing values, dataset ini menyediakan informasi komprehensif tentang game, termasuk metadata, ulasan pengguna, informasi harga, dan ketersediaan platform, yang memungkinkan analisis mendalam tentang karakteristik dan performa game.
+Dataset `final_games` dari gabungan dataset `games` dan `games_metadata` yang dari 14 fitur dengan struktur kompleks yang mencakup 4 fitur categorical (title, date_release, rating, description, tags), 6 fitur numerical (app_id, positive_ratio, user_reviews, price_final, price_original, discount), dan 4 fitur boolean untuk platform game (win, mac, linux, steam_deck). Com total 50.872 entri yang memiliki kelengkapan data 100% tanpa missing values, dataset ini menyediakan informasi komprehensif tentang game, termasuk metadata, ulasan pengguna, informasi harga, dan ketersediaan platform, yang memungkinkan analisis mendalam tentang karakteristik dan performa game.
+
+#### `final_games` Statistic Deskriptif
+
+<!-- markdownlint-disable MD033 -->
+<div style="overflow-x: auto;">
+<!-- markdownlint-enable MD033 -->
+
+| Statistic     | app_id         | positive_ratio | user_reviews     | price_final | price_original | discount |
+|---------------|----------------|----------------|------------------|-------------|----------------|----------|
+| count         | 50,872         | 50,872         | 50,872           | 50,872      | 50,872         | 50,872   |
+| mean          | 1,055,224      | 77.05          | 1,824.43         | 8.62        | 8.73           | 5.59     |
+| std           | 610,324.9      | 18.25          | 40,073.52        | 11.51       | 11.51          | 18.61    |
+| min           | 10             | 0.00           | 10               | 0.00        | 0.00           | 0.00     |
+| 25%           | 528,737.5      | 67.00          | 19               | 0.99        | 0.99           | 0.00     |
+| 50%           | 986,085        | 81.00          | 49               | 4.99        | 4.99           | 0.00     |
+| 75%           | 1,524,895      | 91.00          | 206              | 10.99       | 11.99          | 0.00     |
+| max           | 2,599,300      | 100.00         | 7,494,460        | 299.99      | 299.99         | 90.00    |
+
+</div>
+
+Dataset `final_games` menunjukkan variasi signifikan dalam berbagai metrik. app_id memiliki rentang yang luas dari 10 hingga 2,599,300, dengan rata-rata 1,055,224. positive_ratio menunjukkan rata-rata ulasan positif sekitar 77%, dengan standar deviasi 18.25%. Variabel harga (price_final dan price_original) memiliki rata-rata sekitar $8.62, namun dengan rentang yang lebar dari $0 hingga $299.99, menandakan diversitas pricing game.
 
 #### `sample_data_users` Info
 
@@ -320,6 +341,21 @@ Dataset `final_games` dan `games_metadata` yang sudah di gabungkan terdiri dari 
 |  2  | reviews          |  40771 non-null | int32   |
 
 Dataset `users` terdiri dari 3 fitur dengan struktur sederhana, mencakup 1 fitur integer (user_id, products, reviews) dengan total 40.771 entri. Total kelengkapan data 100% tanpa missing values, dataset ini memberikan informasi dasar tentang pengguna, fokus pada identifikasi pengguna, jumlah produk, dan jumlah review yang mereka lakukan, yang memungkinkan analisis awal tentang aktivitas dan interaksi pengguna dalam konteks game.
+
+#### `sample_data_users` Statistik Deskriptif
+
+| Statistic     | user_id         | products       | reviews         |
+|---------------|-----------------|----------------|-----------------|
+| count         | 40,771          | 40,771         | 40,771          |
+| mean          | 7,456,114       | 274.09         | 20.40           |
+| std           | 4,014,007       | 626.77         | 83.88           |
+| min           | 519             | 0.00           | 1.00            |
+| 25%           | 4,277,404       | 50.00          | 2.00            |
+| 50%           | 7,546,667       | 119.00         | 5.00            |
+| 75%           | 10,979,680      | 272.00         | 15.00           |
+| max           | 14,304,900      | 17,475.00      | 6,045.00        |
+
+Dataset `Users` menggambarkan karakteristik pengguna dengan user_id tersebar dari 519 hingga 14,304,900. Rata-rata jumlah produk per pengguna adalah 274, dengan variasi besar (std 626.77). Jumlah review per pengguna relatif rendah, dengan rata-rata 20.40 review dan median hanya 5 review.
 
 #### `sample_recommendations` Info
 
@@ -336,33 +372,10 @@ Dataset `users` terdiri dari 3 fitur dengan struktur sederhana, mencakup 1 fitur
 
 Dataset `sample_recommendations` terdiri dari 8 fitur dengan struktura beragam, mencakup 5 fitur integer (app_id, helpful, funny, user_id, review_id), 1 fitur float (hours), 1 fitur object (date), dan 1 fitur boolean (is_recommended) dengan total 41.155 entri. Dataset memiliki kelengkapan data 100% tanpa missing values, memberikan informasi detail tentang rekomendasi game, termasuk aspek interaksi pengguna seperti jumlah review yang dianggap membantu, review lucu, status rekomendasi, dan durasi bermain game.
 
-### Statistik Deskripttif
-
-| Statistic     | app_id         | positive_ratio | user_reviews     | price_final | price_original | discount |
-|---------------|----------------|----------------|------------------|-------------|----------------|----------|
-| count         | 50,872         | 50,872         | 50,872           | 50,872      | 50,872         | 50,872   |
-| mean          | 1,055,224      | 77.05          | 1,824.43         | 8.62        | 8.73           | 5.59     |
-| std           | 610,324.9      | 18.25          | 40,073.52        | 11.51       | 11.51          | 18.61    |
-| min           | 10             | 0.00           | 10               | 0.00        | 0.00           | 0.00     |
-| 25%           | 528,737.5      | 67.00          | 19               | 0.99        | 0.99           | 0.00     |
-| 50%           | 986,085        | 81.00          | 49               | 4.99        | 4.99           | 0.00     |
-| 75%           | 1,524,895      | 91.00          | 206              | 10.99       | 11.99          | 0.00     |
-| max           | 2,599,300      | 100.00         | 7,494,460        | 299.99      | 299.99         | 90.00    |
-
-Dataset Games d; menunjukkan variasi signifikan dalam berbagai metrik. app_id memiliki rentang yang luas dari 10 hingga 2,599,300, dengan rata-rata 1,055,224. positive_ratio menunjukkan rata-rata ulasan positif sekitar 77%, dengan standar deviasi 18.25%. Variabel harga (price_final dan price_original) memiliki rata-rata sekitar $8.62, namun dengan rentang yang lebar dari $0 hingga $299.99, menandakan diversitas pricing game.
-
-| Statistic     | user_id         | products       | reviews         |
-|---------------|-----------------|----------------|-----------------|
-| count         | 40,771          | 40,771         | 40,771          |
-| mean          | 7,456,114       | 274.09         | 20.40           |
-| std           | 4,014,007       | 626.77         | 83.88           |
-| min           | 519             | 0.00           | 1.00            |
-| 25%           | 4,277,404       | 50.00          | 2.00            |
-| 50%           | 7,546,667       | 119.00         | 5.00            |
-| 75%           | 10,979,680      | 272.00         | 15.00           |
-| max           | 14,304,900      | 17,475.00      | 6,045.00        |
-
-Dataset Users menggambarkan karakteristik pengguna dengan user_id tersebar dari 519 hingga 14,304,900. Rata-rata jumlah produk per pengguna adalah 274, dengan variasi besar (std 626.77). Jumlah review per pengguna relatif rendah, dengan rata-rata 20.40 review dan median hanya 5 review.
+#### `sample_recommendations` Statistik Deskriptif
+<!-- markdownlint-disable MD033 -->
+<div style="overflow-x: auto;">
+<!-- markdownlint-enable MD033 -->
 
 | Statistic     | app_id          | helpful        | funny          | hours          | user_id         | review_id      |
 |---------------|-----------------|----------------|-----------------|----------------|-----------------|----------------|
@@ -375,7 +388,9 @@ Dataset Users menggambarkan karakteristik pengguna dengan user_id tersebar dari 
 | 75%           | 945,360         | 0.00           | 0.00            | 97.20          | 10,994,280      | 30,840,180     |
 | max           | 2,209,610       | 2,483.00       | 2,535.00        | 999.80         | 14,304,900      | 41,154,280     |
 
-3 Table diatas memberikan informasi statistik pada masing-masing kolom di 3 dataset, antara lain:
+</div>
+
+3 Table deskriptif diatas memberikan informasi statistik pada masing-masing kolom di 3 dataset, antara lain:
 
 - Count adalah jumlah sampel pada data.
 - Mean adalah nilai rata-rata.
@@ -388,37 +403,132 @@ Dataset Users menggambarkan karakteristik pengguna dengan user_id tersebar dari 
 
 ### Exploratory Data Analysis - Univariate Analysis
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-5.png?raw=true)
+#### 1. Distribusi Platform Game
 
-Pada visualisasi Type Anime di atas dapat disimpulkan bahwa Type Anime TV menduduki jumlah paling tinggi disusul Movie dan OVA dan paling lalu ada Type anime UNKNOWN dengan jumlah paling sedikit.
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar01.png)
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-7.png?raw=true)
+Interpretasi data sistem operasi ini mengungkapkan pola penggunaan yang sangat jelas. Windows mendominasi dengan tingkat penetrasi yang hampir mutlak, dengan 98.4% pengguna menggunakan sistem operasi ini, meninggalkan hanya 1.6% untuk sistem operasi lain. Linux menempati posisi ketiga dengan 17.8% pengguna, sementara macOS memiliki pangsa 25.6% pengguna. Hal yang menarik adalah Steam Deck, yang mencatat 100% penggunaan dalam dataset ini, meskipun mungkin memiliki jumlah pengguna yang lebih terbatas. Kesimpulan utama adalah Windows tetap menjadi platform utama dengan keunggulan yang sangat signifikan, sementara macOS dan Linux membentuk segmen minoritas namun tidak diabaikan dalam ekosistem sistem operasi, mencerminkan keanekaragaman pilihan teknologi di kalangan pengguna.
 
-Pada Visualisasi Sudios Anime di atas didapati bahwa Top 5 distribusi Studio Anime terbanyak sebesar 42.3% Tidak diketahui (UNKNOWN) lalu 3,3% untuk Studio Toei Animation, 2.1% Studio Sunrise, 1.5% Studio J.C.Staff, 1.3% Shanghai Animation Film Studio dan 49.4% untuk studio lainnya.
+#### 2. Distribusi Rasio Ulasan Positif
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-8.png?raw=true)
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar02.png)
 
-Hasil visualisasi di atas dapat disimpulkan untuk top 10 anime teratas berdasarkan jumlah membernya mulai dari shingeki no kyojin hingga hunter x hunter.
+Diagram histogram tersebut menampilkan distribusi rasio ulasan positif dengan cara yang memberikan wawasan mendalam tentang persepsi pengguna. Sumbu horizontal menggambarkan persentase rasio ulasan positif, sementara sumbu vertikal menunjukkan frekuensi kemunculan. Pola distribusi yang terlihat menunjukkan peningkatan bertahap dalam frekuensi seiring naiknya rasio ulasan positif, dengan puncak yang sangat jelas berada pada kisaran 90-100%, di mana lebih dari 15.000 ulasan termasuk dalam kategori ini. Kisaran 70-90% pun memiliki kontribusi yang signifikan dengan sekitar 10.000 ulasan. Sebaliknya, frekuensi ulasan menurun tajam pada rasio di bawah 50%, mengindikasikan bahwa ulasan dengan sentiment negatif sangat jarang terjadi. Kesimpulan yang dapat ditarik adalah bahwa produk atau layanan yang dianalisis sangat positif diterima oleh pengguna, dengan mayoritas ulasan menunjukkan tingkat kepuasan yang tinggi dan konsisten.
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-9.png?raw=true)
+#### 3. Distribusi Rating Game
 
-Hasil visualisasi di atas di dapati untuk top 10 anime teratas berdasarkan skor paling tinggi jika diambil 10 teratas berdasarkan score maka hasilnya berbeda dengan 10 anime teratas berdasarkan jumlah membernya.
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar03.png)
+
+Diagram batang tersebut menggambarkan distribusi rating game yang menunjukkan pola menarik dalam ulasan pengguna. Kategori **Positive**, **Very Positive**, dan **Mixed** mendominasi dengan frekuensi sekitar 13.000 hingga 14.000 ulasan, mengindikasikan bahwa mayoritas game menerima tanggapan yang cukup baik atau setidaknya beragam. **Mostly Positive** turut menyumbang sekitar 8.000 ulasan, semakin memperkuat kecenderungan ulasan yang relatif positif. Sebaliknya, kategori dengan rating rendah seperti **Mostly Negative**, **Negative**, **Very Negative**, dan **Overwhelmingly Negative** memiliki frekuensi yang jauh lebih sedikit. Kesimpulan yang dapat ditarik adalah bahwa pengalaman pengguna dengan game secara umum cenderung positif, dengan variasi pendapat yang ada, sementara ulasan ekstrem baik yang sangat positif maupun sangat negatif hanya mencakup proporsi kecil dari keseluruhan ulasan.
+
+#### 4. Distribusi Diskon
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar04.png)
+
+Histogram tersebut menunjukkan distribusi persentase diskon. Mayoritas data terpusat di sekitar nilai 0%, yang mengindikasikan bahwa sebagian besar produk atau transaksi tidak mendapatkan diskon. Frekuensi diskon yang lebih tinggi pada nilai rendah (mendekati 0%) secara signifikan menonjol dibandingkan nilai diskon yang lebih tinggi.
+
+Diskon dengan persentase lebih besar dari 20% hingga mendekati 80% jarang terjadi, terlihat dari jumlah bar yang kecil di kisaran tersebut. Distribusi ini mencerminkan bahwa diskon besar lebih jarang diberikan dibandingkan diskon kecil atau tanpa diskon sama sekali.
+
+Hal ini dapat mengindikasikan strategi pemasaran yang lebih sering menawarkan harga penuh atau diskon minimal, dengan hanya sedikit transaksi yang menawarkan diskon besar sebagai insentif tambahan.
+
+#### 5. Distribusi Top 15 Tag Game
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar05.png)
+
+Berdasarkan bar chart yang menampilkan 15 tag game terpopuler, terlihat bahwa tag "Indie" mendominasi dengan frekuensi tertinggi, menandakan besarnya peran game indie dalam dataset. Diikuti oleh tag populer lainnya seperti "Singleplayer," "Action," dan "Adventure" yang menunjukkan minat tinggi terhadap game mode pemain tunggal dan genre aksi atau petualangan. Tag seperti "Casual," "Simulation," dan "2D" menempati posisi menengah dengan frekuensi yang signifikan, sementara "Pixel Graphics" berada di posisi terbawah dari 15 tag teratas namun tetap memiliki keberadaan yang berarti. Secara komprehensif, data ini mencerminkan kecenderungan pengguna atau developer dalam menciptakan dan menikmati game-game indie, berpengalaman singleplayer, dengan fokus pada elemen aksi dan petualangan.
+
+#### 6. Distribusi Word Cloud Tags
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar06.png)
+
+Secara keseluruhan, word cloud ini menggambarkan dataset yang didominasi oleh game-game indie, dengan fokus pada elemen cerita yang kaya, akses awal, dan fitur-fitur permainan yang memberikan kebebasan dan pilihan bagi pemain. Genre game yang beragam, mulai dari aksi, RPG, petualangan, hingga simulasi, juga nampak menonjol dalam dataset ini.
+
+#### 7. Distribusi Word Cloud Descriptions
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar07.png)
+
+Secara keseluruhan, word cloud ini menggambarkan kumpulan game yang menekankan pada pengalaman inovatif, eksplorasi, pembangunan, dan tantangan, dengan unsur-unsur naratif, emosional, dan pengembangan karakter yang kuat. Game-game ini tampaknya mencakup berbagai genre dan gaya, dari tradisional hingga modern, serta menawarkan pengalaman bermain yang beragam bagi para pemain.
 
 ### Exploratory Data Analysis - Multivariate Analysis
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-10.png?raw=true)
+#### 1. Distribusi Kolom `is_recommended` dan `hours`
 
-Dari visualisasi di atas didapati nilai korelasi negatif sebesar -0.36 menunjukkan adanya **hubungan negatif sedang** antara jumlah Members dan Popularity. Ini berarti bahwa anime dengan jumlah Members yang lebih tinggi cenderung memiliki nilai Popularity yang lebih rendah.
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar08.png)
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-11.png?raw=true)
+Berdasarkan bar chart yang menampilkan rata-rata waktu bermain (average playtime) dalam jam berdasarkan rekomendasi game (is recommended), dapat diinterpretasikan bahwa game yang direkomendasikan (dengan nilai "True") memiliki rata-rata waktu bermain yang lebih tinggi dibandingkan game yang tidak direkomendasikan (dengan nilai "False"). Hal ini mengindikasikan bahwa rekomendasi game kemungkinan besar berkorelasi dengan tingkat kepuasan atau keterlibatan pengguna, di mana waktu bermain yang lebih lama dapat menjadi indikator bahwa game tersebut menawarkan pengalaman yang menarik atau gameplay yang memikat bagi pemainnya. Untuk meningkatkan rekomendasi game, developer atau platform dapat mempertimbangkan pola ini untuk mengidentifikasi game-game dengan potensi tinggi dalam meningkatkan keterlibatan dan waktu bermain pemain.
 
-Pada visualisasi di atas didapati nilai korelasi negatif -0.19 ini menunjukkan **hubungan yang lemah** antara jumlah Favorites dan Popularity. Korelasi negatif berarti bahwa ketika jumlah Favorites meningkat, nilai Popularity (peringkat) cenderung menurun.
+#### 2. Analisis Pengguna dengan Produk dan Ulasan
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-12.png?raw=true)
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar09.png)
 
-Pada visualisasi di atas didapati nilai korelasi 0.773 menunjukkan adanya hubungan positif yang kuat antara jumlah Favorites dan Members. Ini berarti bahwa anime dengan jumlah Members yang tinggi cenderung juga memiliki jumlah Favorites yang tinggi.
+1. **Distribusi Jumlah Produk per Pengguna (kiri)**:
+   Histogram ini menunjukkan bahwa sebagian besar pengguna hanya berinteraksi dengan sejumlah kecil produk. Mayoritas pengguna berada di kisaran jumlah produk yang sangat rendah, dan jumlah pengguna berkurang drastis seiring bertambahnya jumlah produk yang mereka interaksikan. Ada ekor panjang (long tail) yang menunjukkan bahwa sedikit pengguna memiliki jumlah produk yang sangat tinggi.
 
-## Data Preparation
+2. **Distribusi Jumlah Ulasan per Pengguna (kanan)**:
+   Pola serupa terlihat pada distribusi ulasan. Sebagian besar pengguna memberikan sangat sedikit ulasan, dengan jumlah pengguna yang menurun tajam seiring bertambahnya jumlah ulasan yang dibuat. Sama seperti grafik pertama, terdapat ekor panjang yang menunjukkan bahwa hanya sejumlah kecil pengguna yang memberikan ulasan dalam jumlah besar.
+
+Secara keseluruhan, kedua distribusi ini menunjukkan pola yang sangat mirip, dengan sebagian besar aktivitas terkonsentrasi pada sebagian kecil pengguna, dan hanya sedikit pengguna yang sangat aktif dalam hal jumlah produk yang diulas atau jumlah ulasan yang dibuat. Fenomena ini umum dalam data interaksi pengguna, yang sering kali mengikuti distribusi yang tidak merata.
+
+#### 3. Korelasi antara kolom `price_final`, `positive_ratio`, `user_reviews` dan `discount`
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar10.png)
+
+Gambar tersebut menggambarkan hubungan antara beberapa variabel `price_final`, `positive_ratio`, `user_reviews`, dan `discount`. Analisis menunjukkan bahwa sebagian besar variabel tidak memiliki hubungan linear yang signifikan, dengan korelasi mendekati nol. Namun, terdapat hubungan lemah yang signifikan antara `price_final` dan `discount`, di mana harga akhir cenderung menurun jika diskon meningkat, meskipun korelasinya lemah. Hasil ini mengindikasikan bahwa faktor-faktor ini perlu dieksplorasi lebih jauh dengan metode selain regresi linier sederhana.
+
+#### 4. Distribusi Harga dan Rasio Review Positif
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar11.png)
+
+ scatter plot yang menunjukkan hubungan antara Harga (x-axis) dan Rasio Review Positif (y-axis). Analisis menunjukkan bahwa sebagian besar produk memiliki harga rendah di bawah 50, dengan rasio review positif yang beragam, mulai dari 0 hingga 100. Tidak terlihat adanya pola hubungan yang jelas antara harga dan rasio review positif. Pada harga yang lebih tinggi, di atas 100, jumlah produk sangat sedikit, tetapi rasio review positif tetap beragam. Hal ini mengindikasikan bahwa produk dengan rasio review positif tinggi tidak terbatas pada kategori harga tertentu. Scatter plot ini bermanfaat untuk mengidentifikasi pola hubungan atau outlier yang membutuhkan perhatian lebih lanjut dalam analisis.
+
+#### 5. Distribusi Harga game berdasarkan seluruh platform
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar12.png)
+
+Berdasarkan diagram ini, dapat dilihat bahwa sebagian besar harga game untuk semua platform berada dalam rentang yang mirip, dengan median harga yang relatif sama. Ada beberapa outlier dengan harga yang jauh lebih tinggi dari kebanyakan game, terutama pada kisaran harga 100 hingga 300. Distribusi harga game untuk setiap platform tampaknya cukup simetris, tanpa perbedaan yang signifikan antara platform yang satu dengan yang lain. Dari segi variabilitas, semua platform memiliki rentang harga yang hampir serupa, menunjukkan bahwa tidak ada platform yang secara signifikan lebih mahal atau lebih murah dibandingkan yang lain.
+
+Secara keseluruhan, diagram ini menunjukkan bahwa harga game cukup konsisten di semua platform, meskipun ada beberapa game yang memiliki harga jauh lebih tinggi yang dianggap sebagai outlier.
+
+#### 6. Distribusi Diskon dan Harga
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar13.png)
+
+diagram ini menunjukkan bahwa meskipun ada berbagai tingkat diskon yang diterapkan, game-game dengan harga lebih tinggi cenderung memiliki diskon yang lebih kecil. Sementara game dengan harga lebih rendah lebih mungkin mendapatkan diskon yang lebih besar. Hal ini bisa menunjukkan strategi penetapan harga di mana game yang lebih murah diberikan diskon lebih besar untuk menarik lebih banyak pembeli.
+
+#### 7. Distribusi Jumlah Review dan Rasio Positif
+
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar14.png)
+
+Diagram ini menunjukkan hubungan antara jumlah review pengguna dan rasio review positif. Sebagian besar game memiliki rasio review positif tinggi, terutama di atas 80%, dengan hanya sedikit game yang memiliki rasio di bawah 40%. Kebanyakan game juga memiliki jumlah review yang rendah, dengan beberapa outlier yang memiliki jumlah review sangat tinggi, mencapai lebih dari 1 juta. Tidak ada hubungan yang jelas antara jumlah review dan rasio review positif, karena game dengan review sedikit maupun banyak dapat memiliki rasio positif yang tinggi. Outliers dengan lebih dari 3 juta review umumnya memiliki rasio positif di atas 60%. Secara keseluruhan, diagram ini menunjukkan bahwa banyak game memiliki rasio review positif tinggi terlepas dari jumlah review yang diterima, meskipun ada variabilitas signifikan dalam data.
+
+## Sistem Rekomendasi Games - Content-based Filtering
+
+### Data Preparation
+### Pembersihan Text
+### Stemming Text
+### Vektorisasi Text
+### Fungsi Rekomendasi
+### Pengujian Penggunaan Sistem Rekomendasi
+
+## Sistem Rekomendasi Games - Collaborative Filtering
+
+### Persiapan Matriks Rekomendasi User-Games
+### Menghitung Kesamaan Antar Pengguna
+### Pengujian Sistem Rekomendasi untuk Pengguna Tertentu
+### Persiapan Matriks Rekomendasi Games-games
+### Hitung similarity antar item
+### Melakukan Pengujian Collaborative Filtering
+
+
+## Sistem Rekomendasi Games - Hybrid Recommendation System
+
+### Data Preparation
+### Feature Engineering
+### Model Architecture
+### Model Training
+### Visualisasi
+### Inferensi
+
 
 Teknik Data preparation yang dilakukan terdiri dari:
 
@@ -431,7 +541,7 @@ Teknik Data preparation yang dilakukan terdiri dari:
 
 sebelumnya kita memiliki 3 file csv dan setelah di cek untuk melakukan Content Based Filtering kita cukup menggunakan dataset `anime-dataset-2023` dan untuk Collaborative Filtering kita cukup menggunakan `users-score-2023` yang kemudian akan disimpan kedalam 2 data frame Anime dan Rating.
 
-**Penanganan Missing Value**
+#### **Penanganan Missing Value**
 
 - pada tahap Exploratory Data Analysis kita mengidentifikasi terdapat terdapat missing value pada dataset `user-details-2023.csv` pada atribut Username dengan jumlah 1 , Gender berjumlah 506907, Birthday berjumlah 563222, Location berjumlah 578485 dan pada dataset `user-score-2023.csv` missing value berjumlah 232 pada atribut username yang harus dihapus.
 
@@ -445,17 +555,15 @@ sebelumnya kita memiliki 3 file csv dan setelah di cek untuk melakukan Content B
     | --------------------- | ----------- | ------------ |
     | user-details-2023.csv | 731290      | 16           |
 
-        <br>
-
     | Nama Dataset        | Jumah Baris | Jumlah Kolom |
     | ------------------- | ----------- | ------------ |
     | user-score-2023.csv | 24325191    | 5            |
 
-**Hapus beberapa atribut yang tidak terlalu penting pada dataframe Rating**
+### **Hapus beberapa atribut yang tidak terlalu penting pada dataframe Rating**
 
 `Rating = user_rating.drop(columns=['Anime Title', 'Username'])`
 
-**Menyamakan Anime Genres**
+### **Menyamakan Anime Genres**
 
 | anime_id | Name                                              | Genres  |
 | -------- | ------------------------------------------------- | ------- |
