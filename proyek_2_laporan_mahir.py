@@ -131,6 +131,14 @@ users = pd.read_csv('/content/users.csv')
 recommendations = pd.read_csv('/content/recommendations.csv')
 games_metadata = pd.read_json('/content/games_metadata.json', lines=True)
 
+games.shape
+
+users.shape
+
+recommendations.shape
+
+games_metadata.shape
+
 games.head()
 
 users.head()
@@ -152,7 +160,15 @@ recommendations.isnull().sum()
 
 games_metadata.isnull().sum()
 
+"""### Konversikan `games_metadata` dengan daftar menjadi tuple agar bisa melakukan data cleaning"""
+
+for col in games_metadata.columns:
+    if games_metadata[col].apply(type).eq(list).any():
+        games_metadata[col] = games_metadata[col].apply(tuple)
+
 """### Pengecekan duplikasi data"""
+
+games_metadata.duplicated().sum()
 
 games.duplicated().sum()
 
@@ -160,16 +176,10 @@ users.duplicated().sum()
 
 recommendations.duplicated().sum()
 
-"""### Konversikan `games_metadata` dengan daftar menjadi tuple agar bisa melakukan data cleaning"""
+"""### Mengurangi data yang besar
 
-# Konversikan kolom dengan daftar menjadi tuple. Tuple bersifat tidak dapat diubah (immutable) dan dapat di-hash.
-for col in games_metadata.columns:
-    if games_metadata[col].apply(type).eq(list).any():
-        games_metadata[col] = games_metadata[col].apply(tuple)
-
-games_metadata.duplicated().sum()
-
-"""### Membuat fungsi untuk konversi type data 64 ke 32"""
+Membuat fungsi untuk konversi type data 64 ke 32
+"""
 
 def reduce_memory(data):
     for col in data.columns:
@@ -187,10 +197,7 @@ data_recommendations = reduce_memory(recommendations)
 
 data_games_metadata = reduce_memory(games_metadata)
 
-"""### Mengurangi data yang besar
-
-Pada tahap ini kita akan melakukan pengurangan data yang besar agar tidak crash
-"""
+"""Pada tahap ini kita akan melakukan pengurangan data yang besar agar tidak crash"""
 
 sample_recommendations = data_recommendations.sample(frac=0.001, random_state=42)
 
@@ -217,6 +224,8 @@ consistent_recommendations = sample_recommendations[
 
 print(f"Final jumlah rekomendasi: {consistent_recommendations.shape[0]}")
 print(f"Final jumlah users: {sample_data_users.shape[0]}")
+
+"""Selanjutnya kita akan melakukan pengecekan konsistensi user_id dan app_id agar tidak ada yang missing relasi"""
 
 # Cek konsistensi user_id
 missing_users = set(consistent_recommendations['user_id']) - set(sample_data_users['user_id'])
@@ -449,7 +458,10 @@ plt.axis('off')  # Menyembunyikan sumbu
 plt.title('Word Cloud from Tags')
 plt.show()
 
-"""### Distribusi Word Cloud dari kolom `descriptions`"""
+"""Secara keseluruhan, word cloud ini menggambarkan dataset yang didominasi oleh game-game indie, dengan fokus pada elemen cerita yang kaya, akses awal, dan fitur-fitur permainan yang memberikan kebebasan dan pilihan bagi pemain. Genre game yang beragam, mulai dari aksi, RPG, petualangan, hingga simulasi, juga nampak menonjol dalam dataset ini.
+
+### Distribusi Word Cloud dari kolom `descriptions`
+"""
 
 # Gabungkan semua teks dari description
 description_combined_text = ' '.join(final_games['description'].fillna(''))
@@ -467,7 +479,9 @@ plt.axis('off')  # Menyembunyikan sumbu
 plt.title('Word Cloud from Descriptions')
 plt.show()
 
-"""## ***Exploratory Data Analysis* (EDA)** - *Multivariate Analysis*
+"""Secara keseluruhan, word cloud ini menggambarkan kumpulan game yang menekankan pada pengalaman inovatif, eksplorasi, pembangunan, dan tantangan, dengan unsur-unsur naratif, emosional, dan pengembangan karakter yang kuat. Game-game ini tampaknya mencakup berbagai genre dan gaya, dari tradisional hingga modern, serta menawarkan pengalaman bermain yang beragam bagi para pemain.
+
+## ***Exploratory Data Analysis* (EDA)** - *Multivariate Analysis*
 
 ### 1. Distribusi Kolom `is_recommended` dan `hours`
 """
@@ -481,18 +495,7 @@ plt.ylabel('Waktu Bermain Rata-rata (Hours)')
 plt.tight_layout()
 plt.show()
 
-"""Bar chart tersebut menunjukkan rata-rata waktu bermain (average playtime) dalam jam berdasarkan rekomendasi game (is recommended). Berikut adalah interpretasinya:
-
-1. **Perbedaan Waktu Bermain**:
-   - Game yang direkomendasikan (**True**) memiliki rata-rata waktu bermain lebih tinggi dibandingkan game yang tidak direkomendasikan (**False**).
-   - Hal ini menunjukkan bahwa pengguna cenderung lebih lama memainkan game yang mereka rekomendasikan.
-
-2. **Implikasi**:
-   - Rekomendasi kemungkinan besar berkorelasi dengan tingkat kepuasan atau keterlibatan pengguna terhadap game tersebut.
-   - Waktu bermain yang lebih lama dapat menjadi indikator bahwa game tersebut menawarkan pengalaman yang menarik atau gameplay yang memikat.
-
-3. **Kesimpulan**:
-   - Untuk meningkatkan rekomendasi, developer atau platform dapat mempertimbangkan pola ini untuk mengidentifikasi game dengan potensi tinggi dalam meningkatkan keterlibatan pemain.
+"""Berdasarkan bar chart yang menampilkan rata-rata waktu bermain (average playtime) dalam jam berdasarkan rekomendasi game (is recommended), dapat diinterpretasikan bahwa game yang direkomendasikan (dengan nilai "True") memiliki rata-rata waktu bermain yang lebih tinggi dibandingkan game yang tidak direkomendasikan (dengan nilai "False"). Hal ini mengindikasikan bahwa rekomendasi game kemungkinan besar berkorelasi dengan tingkat kepuasan atau keterlibatan pengguna, di mana waktu bermain yang lebih lama dapat menjadi indikator bahwa game tersebut menawarkan pengalaman yang menarik atau gameplay yang memikat bagi pemainnya. Untuk meningkatkan rekomendasi game, developer atau platform dapat mempertimbangkan pola ini untuk mengidentifikasi game-game dengan potensi tinggi dalam meningkatkan keterlibatan dan waktu bermain pemain.
 
 ### 2. Analisis Pengguna dengan Produk dan Ulasan
 """
@@ -677,7 +680,7 @@ Secara keseluruhan, diagram ini menunjukkan bahwa banyak game memiliki rasio rev
 
 # Sistem Rekomendasi Games - Content-based Filtering
 
-## Persiapan Data
+## Data Preparation
 
 Memilih kolom yang diperlukan dari dataset final_game
 """
@@ -789,7 +792,7 @@ Kesuksesan relatif dari sistem rekomendasi ini membuka peluang untuk eksplorasi 
 
 Sistem rekomendasi ini menggunakan metode Collaborative Filtering untuk memberikan rekomendasi game berdasarkan preferensi pengguna. Pendekatan ini memanfaatkan kesamaan antara pengguna atau game untuk menghasilkan rekomendasi personal.
 
-### Persiapan Matriks User-Item
+### Persiapan Matriks Rekomendasi User-Games
 
 Membuat matriks yang menggambarkan hubungan antara pengguna dan game yang direkomendasikan.
 """
@@ -823,6 +826,8 @@ user_similarity_df = pd.DataFrame(
     columns=user_item_matrix.index
 )
 
+user_similarity
+
 """Penjelasan:
 
 - `cosine_similarity()` menghitung kesamaan antara vektor pengguna
@@ -842,7 +847,7 @@ if example_user_id in user_item_matrix.index:
 
     # Cari users terdekat
     similar_users = user_similarity[user_index]
-    similar_users_indices = similar_users.argsort()[::-1][1:6]
+    similar_users_indices = similar_users.argsort()[::-1][1:11]
 
     # Game yang direkomendasikan
     recommended_games = []
@@ -855,7 +860,7 @@ if example_user_id in user_item_matrix.index:
 
     # Filter dan ranking
     recommended_games = list(set(recommended_games))
-    user_recommendations = final_games[final_games['app_id'].isin(recommended_games)].sort_values('positive_ratio', ascending=False).head(5)
+    user_recommendations = final_games[final_games['app_id'].isin(recommended_games)].sort_values('positive_ratio', ascending=False).head(10)
     print(f"Recommended games for user {example_user_id}:")
     print(user_recommendations[['title', 'positive_ratio']])
 else:
@@ -864,11 +869,11 @@ else:
 """Penjelasan Alur:
 
 - Pilih pengguna contoh
-- Temukan 5 pengguna dengan preferensi terdekat
+- Temukan 10 pengguna dengan preferensi terdekat
 - Kumpulkan game yang direkomendasikan pengguna serupa
 - Saring dan ranking game berdasarkan rasio positif
 
-### Rekomendasi Game Serupa
+### Persiapan Matriks Rekomendasi Games-games
 
 Menemukan game yang mirip dengan game tertentu berdasarkan preferensi pengguna.
 """
@@ -891,6 +896,8 @@ item_similarity_df = pd.DataFrame(
     columns=item_item_matrix.index
 )
 
+item_similarity_df
+
 """### Melakukan Pengujian Collaborative Filtering"""
 
 # Pilih game contoh
@@ -900,7 +907,7 @@ example_game_id = final_games['app_id'].iloc[0]
 game_index = item_item_matrix.index.get_loc(example_game_id)
 
 # Cari game terdekat
-similar_games_indices = item_similarity[game_index].argsort()[::-1][1:6]
+similar_games_indices = item_similarity[game_index].argsort()[::-1][1:11]
 similar_game_ids = item_item_matrix.index[similar_games_indices]
 
 # Filter dan ranking
@@ -917,7 +924,7 @@ print(similar_games[['app_id', 'title', 'positive_ratio']])
 - Buat matriks item-item menggunakan pivot table
 - Hitung kesamaan antar game menggunakan cosine similarity
 - Pilih contoh game
-- Temukan 5 game terdekat
+- Temukan 10 game terdekat
 - Saring dan ranking game berdasarkan rasio positif
 
 ### **Kesimpulan**
@@ -925,7 +932,7 @@ Metode Collaborative Filtering memungkinkan kita memberikan rekomendasi game yan
 
 # Sistem Rekomendasi Games - Hybrid Recommendation System
 
-### Data Preprocessing
+### Data Preparation
 
 Konversi tipe data tags dari tuple menjadi list menggunakan `final_games['tags_list'] = final_games['tags'].apply(list)`.
 """
@@ -1094,7 +1101,7 @@ Menggunakan model yang sudah dilatih untuk memprediksi positive_ratio untuk 5 sa
 """
 
 # Prediksi positive ratio untuk beberapa game
-sample_games = final_games.sample(5)
+sample_games = final_games.sample(10)
 
 predicted_ratings = recommender_model.predict([
     tags_df.loc[sample_games.index].values,
@@ -1104,6 +1111,4 @@ predicted_ratings = recommender_model.predict([
 
 sample_games['predicted_rating'] = predicted_ratings * 100
 print(sample_games[['title', 'predicted_rating']])
-
-"""# Kesimpulan"""
 

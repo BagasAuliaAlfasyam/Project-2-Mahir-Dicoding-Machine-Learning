@@ -238,6 +238,12 @@ print(f"Final jumlah rekomendasi: {consistent_recommendations.shape[0]}")
 print(f"Final jumlah users: {sample_data_users.shape[0]}")
 ```
 
+Output :
+
+`Final jumlah rekomendasi: 41155`
+
+`Final jumlah users: 40771`
+
 Tujuan dari tahap ini adalah memastikan konsistensi dan integritas referensial antara dataset recommendations, users, dan games. Dengan melakukan filtering dan validasi, kita dapat: (1) menghilangkan entri yang tidak valid, (2) memastikan setiap rekomendasi terkait dengan user dan game yang aktual, dan (3) mencegah potensi kesalahan dalam analisis atau pemodelan yang disebabkan oleh data yang tidak konsisten.
 
 #### Cek Konsistensi User ID dan App ID
@@ -250,6 +256,12 @@ print(f"User ID yang ada di consistent_recommendations tapi tidak ada di users: 
 missing_games = set(consistent_recommendations['app_id']) - set(games['app_id'])
 print(f"Game ID yang ada di recommendations tapi tidak ada di games: {len(missing_games)}")
 ```
+
+Output :
+
+`User ID yang ada di consistent_recommendations tapi tidak ada di users: 0`
+
+`Game ID yang ada di recommendations tapi tidak ada di games: 0`
 
 Tujuan dari pemeriksaan konsistensi ini adalah melakukan validasi akhir terhadap integritas data. Dengan memeriksa apakah terdapat user ID atau game ID yang tidak valid dalam dataset recommendations, kita dapat: (1) mengidentifikasi potensi anomali data, (2) memastikan kualitas dataset sebelum analisis, dan (3) mencegah kesalahan yang mungkin timbul dari data yang tidak lengkap atau tidak konsisten.
 
@@ -504,327 +516,551 @@ Diagram ini menunjukkan hubungan antara jumlah review pengguna dan rasio review 
 ## Sistem Rekomendasi Games - Content-based Filtering
 
 ### Data Preparation
-### Pembersihan Text
-### Stemming Text
-### Vektorisasi Text
+
+Tahap persiapan data merupakan fondasi kritis dalam membangun sistem rekomendasi. Proses ini dimulai dengan seleksi kolom yang paling relevan untuk menganalisis karakteristik game. Dengan memilih kolom seperti `app_id`, `title`, `description`, dan `tags`, kita membatasi dataset pada informasi esensial yang akan digunakan untuk memahami keunikan setiap game.
+
+```python
+df = final_games[['app_id', 'title','description', 'tags']]
+```
+
+Selanjutnya, dilakukan transformasi data dengan menggabungkan tags menjadi string tunggal. Langkah ini penting untuk mempersiapkan data teks guna proses pengolahan selanjutnya. Dengan mengkonversi list tag menjadi string, kita menyederhanakan struktur data dan memudahkan analisis tekstual.
+
+```python
+df.loc[:, 'tags'] = df['tags'].apply(lambda x:' '.join(x))
+```
+
+Tahap krusial berikutnya adalah pembuatan kolom overview. Di sini, kita mengintegrasikan berbagai informasi deskriptif - judul, deskripsi, dan tags - menjadi satu representasi komprehensif dari setiap game. Pendekatan ini memungkinkan analisis mendalam dengan memanfaatkan seluruh informasi yang tersedia.
+
+```python
+df.loc[:, 'overview'] = df['title'] + " " + df['description'] + " " + df['tags']
+```
+
+Kita membuat dataframe final dengan menyeleksi kolom-kolom `app_id`, `title`, dan `overview` dari dataframe asli. Kolom app_id berfungsi sebagai identifikasi unik untuk setiap aplikasi, kolom `title` menyimpan judul aplikasi yang menggambarkan nama atau identitas aplikasi tersebut, dan kolom `overview` mengintegrasikan informasi deskriptif yang telah kita buat sebelumnya. Dengan menyatukan judul, deskripsi, dan tags ke dalam kolom `overview`, kita mendapatkan representasi komprehensif dari setiap game yang mencakup berbagai aspek penting. Dataframe ini akan digunakan untuk analisis lebih lanjut, memungkinkan kita memanfaatkan seluruh informasi yang tersedia dalam analisis mendalam dan memberikan wawasan yang lebih baik tentang setiap aplikasi game.
+
+```python
+final_df = df[['app_id','title','overview']]
+```
+
+### Preprocessing Teks
+
+Preprocessing teks adalah tahap transformasi data mentah menjadi format yang lebih terstruktur dan siap untuk dianalisis. Tahap ini sangat penting untuk memastikan data teks yang digunakan dalam analisis bebas dari elemen-elemen yang dapat mengganggu, seperti tanda baca, karakter khusus, dan simbol-simbol lain yang tidak relevan. Salah satu langkah kunci dalam preprocessing teks adalah pembersihan karakter khusus. Proses ini bertujuan untuk menghilangkan elemen-elemen yang tidak diperlukan, sehingga teks menjadi lebih bersih dan mudah dianalisis. Dengan melakukan pembersihan karakter khusus, kita dapat meningkatkan akurasi model analisis teks dan memastikan bahwa hasil analisis lebih dapat diandalkan.
+
+Berikut adalah fungsi yang digunakan untuk menghapus karakter khusus dari teks:
+
+```python
+def remove_special_characters(s):
+  return re.sub(r'[^\w\s]', '', s)
+```
+
+Fungsi `remove_special_characters` menggunakan ekspresi reguler untuk menghapus semua karakter yang bukan huruf, angka, atau spasi dari string yang diberikan. Ini memastikan bahwa teks hanya terdiri dari kata-kata dan angka yang relevan untuk analisis.
+
+Menerapkan pembersihan karakter khusus pada kolom `overview`:
+
+```python
+df['overview'] = df['overview'].apply(lambda x : remove_special_characters(x))
+```
+
+Dalam langkah ini, kita menerapkan fungsi `remove_special_characters` ke setiap elemen di kolom `overview` dengan menggunakan metode `apply` dan `lambda`. Hasilnya adalah kolom `overview` yang telah dibersihkan dari karakter-karakter khusus, sehingga teks lebih terstruktur dan siap untuk dianalisis lebih lanjut.
+
+Manfaat dari tahap ini meliputi:
+
+1. **Meningkatkan Kualitas Data:** Menghilangkan karakter yang tidak relevan membuat data lebih bersih dan berkualitas tinggi.
+2. **Meningkatkan Akurasi Analisis:** Dengan data yang bersih, model analisis teks dapat bekerja lebih baik dan memberikan hasil yang lebih akurat.
+3. **Mudah Diproses:** Teks yang telah diproses lebih mudah untuk dianalisis dan diproses lebih lanjut dalam tahap-tahap berikutnya.
+4. **Memperbaiki Kinerja Model:** Model machine learning dan analisis teks dapat berjalan lebih efisien dan efektif dengan data yang telah diproses dengan baik.
+
+### Stemming Teks
+
+Stemming merupakan teknik penting dalam pengolahan bahasa alami yang mengubah kata ke bentuk dasarnya. Ini mengurangi variasi linguistik dan menyederhanakan analisis. Dengan menggunakan Porter Stemmer, kita dapat mengelompokkan kata-kata yang memiliki akar yang sama.
+
+Berikut adalah implementasi fungsi stemming menggunakan Porter Stemmer:
+
+```python
+ps = PorterStemmer()
+
+def stem(text):
+    return " ".join([ps.stem(word) for word in text.split()])
+```
+
+Fungsi `stem` ini memecah teks menjadi kata-kata terpisah, menerapkan stemming pada setiap kata, dan kemudian menggabungkannya kembali menjadi sebuah kalimat.
+
+Selanjutnya, kita menerapkan stemming pada kolom `overview`:
+
+```python
+df['overview'] = df['overview'].apply(stem)
+```
+
+Penerapan ini memastikan bahwa setiap kata dalam kolom `overview` diubah ke bentuk dasarnya, membantu mengurangi variasi kata dan menyederhanakan analisis selanjutnya. Manfaatnya termasuk meningkatkan konsistensi data dan efisiensi dalam proses analisis teks.
+
+### Vektorisasi Teks dan Similarity
+
+Vektorisasi adalah proses mengubah teks menjadi representasi numerik yang dapat dianalisis menggunakan metode komputasi. Count Vectorizer digunakan untuk mengkonversi teks menjadi vektor, dengan pembatasan fitur untuk efisiensi komputasi.
+
+Berikut adalah langkah-langkah untuk melakukan vektorisasi dan menghitung kesamaan (similarity):
+
+**1. Inisialisasi Count Vectorizer:**
+
+```python
+from sklearn.feature_extraction.text import CountVectorizer
+cv = CountVectorizer(max_features=1500, stop_words='english')
+```
+
+**2. Mengubah teks menjadi vektor numerik:**
+
+```python
+vectors = cv.fit_transform(df['overview']).toarray()
+```
+
+**3. Menghitung kesamaan kosinus:**
+
+```python
+from sklearn.metrics.pairwise import cosine_similarity
+similarity = cosine_similarity(vectors)
+```
+
+Dalam proses ini, teks diubah menjadi vektor numerik menggunakan Count Vectorizer, yang membatasi jumlah fitur hingga 1500 dan mengabaikan stop words dalam bahasa Inggris. Setelah itu, vektor numerik tersebut digunakan untuk menghitung kesamaan antar teks menggunakan metrik kesamaan kosinus. Hal ini memungkinkan kita untuk mengukur seberapa mirip teks satu dengan yang lainnya, yang sangat berguna dalam berbagai analisis teks seperti clustering dan rekomendasi.
+
 ### Fungsi Rekomendasi
+
+Fungsi rekomendasi merupakan inti dari sistem content-based filtering. Fungsi ini mengambil sebuah game sebagai input, kemudian mencari game-game lain yang memiliki kesamaan konten berdasarkan vektor similaritas yang telah dihitung.
+
+Berikut adalah implementasi fungsi rekomendasi:
+
+```python
+def recommend(game):
+    # Periksa apakah game ada dalam DataFrame
+    if game not in final_df['title'].values:
+        print("Game not found in the dataset.")
+        return
+
+    # Jika game ada, lanjutkan dengan rekomendasi
+    game_index = final_df[final_df['title'] == game].index[0]
+    distances = similarity[game_index]
+    game_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:11]
+
+    for i in game_list:
+        print(final_df.iloc[i[0]].title)
+```
+
+Fungsi ini pertama-tama memeriksa apakah game yang dimasukkan pengguna ada dalam dataset. Langkah ini penting untuk memastikan bahwa game yang dicari memang tersedia dalam data yang telah kita proses. Jika game tidak ditemukan, fungsi akan menampilkan pesan "Game not found in the dataset." dan menghentikan eksekusi.
+
+Jika game ada dalam dataset, fungsi kemudian menemukan indeks game tersebut dalam DataFrame `final_df`. Indeks ini digunakan untuk mengakses data terkait game yang dimasukkan pengguna, termasuk informasi kesamaannya dengan game-game lain.
+
+Fungsi kemudian mengambil vektor similaritas dari game yang dipilih menggunakan indeks yang ditemukan. Vektor ini berisi nilai kesamaan kosinus antara game yang dipilih dan semua game lainnya dalam dataset. Nilai kesamaan ini dihitung sebelumnya menggunakan metode vektorisasi dan similarity.
+
+Setelah mendapatkan vektor similaritas, fungsi mengurutkan game-game dalam dataset berdasarkan nilai kesamaan tersebut. Pengurutan dilakukan secara menurun, dari yang paling mirip hingga yang kurang mirip. Game yang sama (yang memiliki kesamaan tertinggi dengan dirinya sendiri) diabaikan dengan mengambil urutan mulai dari elemen kedua dalam daftar hasil pengurutan.
+
+Akhirnya, fungsi mencetak judul-judul game yang paling mirip dengan game yang dipilih, sebanyak 10 game teratas. Ini memberikan rekomendasi kepada pengguna tentang game-game lain yang mungkin menarik bagi mereka berdasarkan kesamaan konten dengan game yang dipilih.
+
 ### Pengujian Penggunaan Sistem Rekomendasi
+
+```python
+recommend('Prince of Persia: Warrior Within™')
+```
+
+```cmd
+Output:
+Prince of Persia®: The Sands of Time
+Prince of Persia: The Two Thrones™
+Prince of Persia®
+Prince of Persia: The Forgotten Sands™
+Legacy of Kain: Soul Reaver 2
+DARK SOULS™ III - The Ringed City™
+BERSERK and the Band of the Hawk
+Dark Fantasy Warriors
+Dark Cave
+Dragon's Dogma: Dark Arisen
+```
+
+Akhirnya, fungsi mencetak judul-judul game yang paling mirip dengan game yang dipilih, sebanyak 10 game teratas. Ini memberikan rekomendasi kepada pengguna tentang game-game lain yang mungkin menarik bagi mereka berdasarkan kesamaan konten dengan game yang dipilih.
+
+Dengan implementasi ini, sistem rekomendasi berhasil menyelesaikan permasalahan dengan menyediakan rekomendasi game berdasarkan kesamaan konten, serta menyajikan top-N recommendation sebagai output, yang dalam hal ini adalah 10 game teratas yang paling mirip.
+
+### Formula Evaluasi Matrix Similarity
+
+#### Cosine Similarity
+
+Cosine similarity digunakan untuk mengukur kesamaan antara dua vektor non-zero dalam ruang multi-dimensi. Dalam konteks sistem rekomendasi game, formula ini membantu menentukan seberapa mirip konten antar game.
+
+$$cos(\theta) = \frac{A \cdot B}{||A|| \times ||B||}$$
+
+Dimana:
+
+- $A \cdot B$ adalah dot product dari vektor A dan B
+- $||A||$ adalah magnitude (panjang) vektor A
+- $||B||$ adalah magnitude (panjang) vektor B
+- $\theta$ adalah sudut antara kedua vektor
+
+**Perhitungan Detail**
+
+$$cos(\theta) = \frac{\sum_{i=1}^{n} A_i \times B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \times \sqrt{\sum_{i=1}^{n} B_i^2}}$$
+
+Interpretasi Nilai
+
+- Rentang nilai: 0 sampai 1
+- 0: Tidak ada kesamaan
+- 1: Kesamaan sempurna
+
+Contoh Sederhana
+
+Misal vektor game:
+
+- A = [1, 2, 3]
+- B = [2, 3, 4]
+
+$$cos(\theta) = \frac{(1 \times 2) + (2 \times 3) + (3 \times 4)}{\sqrt{1^2 + 2^2 + 3^2} \times \sqrt{2^2 + 3^2 + 4^2}}$$
+
+##### Implementasi dalam Kode
+
+```python
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Menghitung similarity matrix
+similarity_matrix = cosine_similarity(game_vectors)
+```
+
+**Kelebihan Metode**
+
+- Tidak terpengaruh ukuran vektor
+- Fokus pada arah vektor, bukan magnitudo
+- Cocok untuk data berdimensi tinggi
+
+**Kekurangan Metode**
+
+- Tidak mempertimbangkan konteks semantik
+- Sensitif terhadap preprocessing teks
 
 ## Sistem Rekomendasi Games - Collaborative Filtering
 
 ### Persiapan Matriks Rekomendasi User-Games
+
+Pada tahap ini, kita membuat matriks yang menunjukkan hubungan antara pengguna dan game. Setiap sel dalam matriks berisi 1 jika game direkomendasikan untuk pengguna tersebut, dan 0 jika tidak. Metode pivot_table() digunakan untuk mengubah data mentah menjadi format matriks yang dapat dianalisis.
+
+Berikut implementasinya
+
+```python
+# Membuat matriks pivot yang menghubungkan user dengan game yang direkomendasikan
+user_item_matrix = sample_recommendations.pivot_table(
+    index='user_id',
+    columns='app_id',
+    values='is_recommended',
+    aggfunc='first'
+).fillna(0)
+```
+
 ### Menghitung Kesamaan Antar Pengguna
+
+Tahap ini menghitung kesamaan antara pengguna menggunakan cosine similarity. Metode ini mengukur kosinus sudut antara vektor preferensi game setiap pengguna. Semakin dekat kosinus sudutnya, semakin mirip preferensi game antara dua pengguna.
+
+Berikut implementasinya
+
+```python
+# Menghitung cosine similarity antar user
+user_similarity = cosine_similarity(user_item_matrix)
+user_similarity_df = pd.DataFrame(
+    user_similarity,
+    index=user_item_matrix.index,
+    columns=user_item_matrix.index
+)
+```
+
+Tujuannya di sini adalah untuk mengidentifikasi pengguna dengan selera game yang sama. Dengan menggunakan kesamaan kosinus, sistem:
+
+- Mengukur "sudut" antara vektor preferensi pengguna
+- Menentukan seberapa dekat preferensi game dua pengguna selaras
+- Memungkinkan menemukan pengguna "serupa" yang mungkin menikmati jenis game yang sama
+
+Bayangkan ini seperti menemukan teman dengan daftar putar musik yang hampir identik - jika dua pengguna menyukai game yang sangat mirip, mereka cenderung menikmati rekomendasi tambahan dari riwayat permainan satu sama lain.
+
 ### Pengujian Sistem Rekomendasi untuk Pengguna Tertentu
+
+Pada tahap ini, kita mengambil seorang pengguna contoh `(user ID 10317527)`, mencari pengguna-pengguna yang memiliki preferensi serupa, kemudian mengumpulkan game yang direkomendasikan oleh pengguna serupa. Hasilnya adalah 10 game teratas berdasarkan rasio positif.
+
+Berikut Implementasinya
+
+```python
+# Memilih contoh user dan mencari game rekomendasi berdasarkan user serupa
+example_user_id = 10317527
+
+# Temukan users terdekat
+similar_users_indices = similar_users.argsort()[::-1][1:11]
+
+# Kumpulkan game rekomendasi
+recommended_games = []
+for similar_user_index in similar_users_indices:
+    similar_user_id = user_item_matrix.index[similar_user_index]
+    similar_user_games = user_item_matrix.loc[similar_user_id]
+    recommended_games.extend(
+        similar_user_games[similar_user_games == 1].index.tolist()
+    )
+
+# Filter dan ranking rekomendasi
+user_recommendations = final_games[final_games['app_id'].isin(recommended_games)].sort_values('positive_ratio', ascending=False).head(10)
+```
+
+**Output:**
+
+```Output
+Recommended games for user 10317527:
+                                                   title  positive_ratio
+47394                    Plants vs. Zombies GOTY Edition              97
+47793                                           Factorio              96
+13504                                 Fallout: New Vegas              96
+47428  The Elder Scrolls III: Morrowind® Game of the ...              95
+48165                                              Noita              95
+47500                                       SpeedRunners              94
+2620                              Turok 2: Seeds of Evil              93
+3372                                       Geometry Dash              93
+11280                                        Cave Story+              92
+47495                                  Crusader Kings II              90
+```
+
+ Sistem mencari pengguna-pengguna dengan preferensi serupa, kemudian mengumpulkan dan meranking game yang direkomendasikan oleh pengguna serupa tersebut terdapat 10 rekomendasi game untuk user `10317527`.
+
 ### Persiapan Matriks Rekomendasi Games-games
+
+Serupa dengan matriks user-game, tetapi kali ini kita membalik perspektif: sekarang matriks menghubungkan game dengan pengguna yang merekomendasikannya.
+
+Berikut implementasinya
+
+```python
+# Buat matriks item-item
+item_item_matrix = sample_recommendations.pivot_table(
+    index='app_id',
+    columns='user_id',
+    values='is_recommended',
+    aggfunc='first'
+).fillna(0)
+```
+
+Membalik perspektif matriks sebelumnya. Kali ini, matriks menghubungkan game dengan pengguna yang merekomendasikannya. Hal ini memungkinkan analisis hubungan antar game.
+
 ### Hitung similarity antar item
+
+Tahap ini menghitung kesamaan antar game menggunakan cosine similarity, mirip dengan perhitungan kesamaan antar pengguna sebelumnya.
+
+```python
+# Menghitung cosine similarity antar game
+item_similarity = cosine_similarity(item_item_matrix)
+item_similarity_df = pd.DataFrame(
+    item_similarity,
+    index=item_item_matrix.index,
+    columns=item_item_matrix.index
+)
+```
+
 ### Melakukan Pengujian Collaborative Filtering
 
+```python
+# Memilih game contoh dan mencari game serupa
+example_game_id = final_games['app_id'].iloc[0]
+game_index = item_item_matrix.index.get_loc(example_game_id)
+
+# Temukan game terdekat
+similar_games_indices = item_similarity[game_index].argsort()[::-1][1:11]
+similar_game_ids = item_item_matrix.index[similar_games_indices]
+
+# Filter dan ranking game serupa
+similar_games = final_games[final_games['app_id'].isin(similar_game_ids)].sort_values('positive_ratio', ascending=False)
+```
+
+Output:
+
+```output
+Rekomendasi Game untuk User 10317527
+       app_id                                              title  \
+47394    3590                    Plants vs. Zombies GOTY Edition
+47793  427520                                           Factorio
+13504   22380                                 Fallout: New Vegas
+47428   22320  The Elder Scrolls III: Morrowind® Game of the ...
+48165  881100                                              Noita
+47500  207140                                       SpeedRunners
+2620   405830                             Turok 2: Seeds of Evil
+3372   322170                                      Geometry Dash
+11280  200900                                        Cave Story+
+47495  203770                                  Crusader Kings II
+
+       positive_ratio
+47394              97
+47793              96
+13504              96
+47428              95
+48165              95
+47500              94
+2620               93
+3372               93
+11280              92
+47495              90
+
+Game Serupa dengan Prince of Persia: Warrior Within™
+       app_id                         title  positive_ratio
+16192  400630     Wuppo: Definitive Edition              95
+12101  398850  Epistory - Typing Chronicles              94
+3778   399640                    Flamebreak              93
+19813  399820     Kopanito All-Stars Soccer              84
+14491  399810              Call of Cthulhu®              78
+20921  400130                Freedom Poopie              70
+13110  400360       Adam's Venture: Origins              66
+19362  399120                      Prospekt              62
+22268  399420                     The Prism              62
+50642  400250        Heaven Island - VR MMO              53
+```
+
+Tes akhir menunjukkan dua strategi rekomendasi:
+
+1. Berbasis pengguna yang Merekomendasikan game yang dinikmati pengguna serupa
+2. Berbasis item yang Merekomendasikan game yang mirip dengan game tertentu
+
+Misalnya, saat melihat "Prince of Persia: Warrior Within", sistem menemukan 10 game dengan pola rekomendasi pengguna yang serupa. sistem rekomendasi ini seperti versi yang sangat canggih dari "Jika Anda menyukai ini, Anda mungkin juga menyukai...". Ini menggunakan teknik matematika untuk menemukan pola dalam cara pengguna merekomendasikan game, menciptakan mesin rekomendasi yang cerdas dan berbasis data.
+Dengan menggabungkan kesamaan pengguna dan kesamaan game, sistem dapat memberikan rekomendasi yang dipersonalisasi yang melampaui pencocokan genre sederhana, dengan mempertimbangkan preferensi pengguna dan karakteristik game yang bernuansa.
+
+### **Evaluasi Matrix**
+
+Cosine similarity mengukur kesamaan antara dua vektor \( A \) dan \( B \) berdasarkan sudut di antara keduanya. Rumusnya adalah:
+
+$$
+\text{cos}(\theta) = \frac{A \cdot B}{\|A\| \cdot \|B\|}
+$$
+
+Dimana:
+- **Dot product** \( A \cdot B \) dihitung sebagai:
+  $$
+  A \cdot B = \sum_{i=1}^n (A_i \cdot B_i)
+  $$
+
+- **Norma** \( \|A\| \) dari vektor \( A \) dihitung dengan:
+  $$
+  \|A\| = \sqrt{\sum_{i=1}^n A_i^2}
+  $$
+
+- **Norma** \( \|B\| \) dari vektor \( B \):
+  $$
+  \|B\| = \sqrt{\sum_{i=1}^n B_i^2}
+  $$
+
+Sehingga formula lengkap menjadi:
+$$
+\text{cos}(\theta) = \frac{\sum_{i=1}^n (A_i \cdot B_i)}{\sqrt{\sum_{i=1}^n A_i^2} \cdot \sqrt{\sum_{i=1}^n B_i^2}}
+$$
+
+#### **Penerapan pada Matriks Rekomendasi**
+Dalam konteks matriks rekomendasi:
+1. **Vektor \( A \) dan \( B \):** Representasi preferensi pengguna atau item.
+   - Contoh: Pada matriks **user-item**, \( A \) dapat berupa preferensi pengguna pertama, dan \( B \) adalah preferensi pengguna kedua.
+2. **Komponen Matriks:**
+   - **User-user similarity:** Kemiripan antar pengguna dihitung dari vektor pengguna pada matriks **user-item**.
+   - **Item-item similarity:** Kemiripan antar item dihitung dari vektor item pada matriks **item-item**.
+3. **Nilai Vektor:**
+   - Biner (\( 0/1 \)) jika hanya menunjukkan ada atau tidak preferensi.
+   - Skalar (misalnya rating) jika menunjukkan tingkat preferensi.
+
+### **Kelebihan dan Kekurangan Matriks Cosine Similarity Gabungan**
+
+#### **Kelebihan**
+
+Cosine similarity memiliki keunggulan yang sangat signifikan dalam sistem rekomendasi. Metode ini mampu mengukur kesamaan antar vektor secara independen dari skala, artinya tidak terpengaruh oleh perbedaan ukuran dataset atau panjang vektor. Ini membuatnya sangat fleksibel dan dapat diaplikasikan pada berbagai jenis data, baik dalam collaborative filtering maupun content-based filtering. Komputasi matematis yang sederhana membuatnya efisien dari segi waktu dan sumber daya komputasi, sementara interpretasi nilainya yang mudah dipahami (antara 0-1) membuatnya dapat dimengerti bahkan oleh non-teknis.
+
+#### **Kekurangan**
+
+Namun, cosine similarity memiliki beberapa keterbatasan penting yang perlu dipertimbangkan. Metode ini hanya mengukur kesamaan matematis secara permukaan, tanpa mampu memahami konteks semantik yang lebih mendalam. Hasilnya, rekomendasi yang dihasilkan mungkin kehilangan nuansa kompleks dalam data. Metode ini sangat sensitif terhadap proses preprocessing, di mana kesalahan kecil dalam transformasi data dapat secara signifikan mempengaruhi hasil akhir. Selain itu, cosine similarity cenderung lemah dalam menangkap hubungan non-linear dan mengalami kesulitan dengan data kategorikal, serta berpotensi menciptakan bias pada dataset yang tidak seimbang.
+
+#### **Solusi dan Pendekatan**
+
+Untuk mengatasi keterbatasan ini, para praktisi umumnya merekomendasikan pendekatan hibrid. Ini bisa dilakukan dengan mengkombinasikan cosine similarity dengan metode lain, menambahkan lapisan semantik yang lebih canggih, atau menggunakan teknik preprocessing yang lebih kompleks. Validasi silang berkala dan pertimbangan metrik evaluasi tambahan juga dapat membantu meningkatkan akurasi dan kehandalan sistem rekomendasi yang menggunakan cosine similarity.
+
+Dengan pemahaman yang mendalam tentang kelebihan dan kekurangan metode ini, pengembang dapat merancang sistem rekomendasi yang lebih cerdas, adaptif, dan memenuhi kebutuhan spesifik dari berbagai jenis dataset dan konteks penggunaan.
 
 ## Sistem Rekomendasi Games - Hybrid Recommendation System
 
 ### Data Preparation
-### Feature Engineering
-### Model Architecture
-### Model Training
-### Visualisasi
-### Inferensi
 
+#### Teknik yang Digunakan
 
-Teknik Data preparation yang dilakukan terdiri dari:
+Konversi tipe data tags dilakukan dengan menggunakan `final_games['tags_list'] = final_games['tags'].apply(list)` untuk mengubah tipe data tags dari tuple menjadi list. Hal ini dilakukan karena format list mempermudah proses encoding dengan `MultiLabelBinarizer`. Selanjutnya, teknik multi-label binarization diterapkan menggunakan `MultiLabelBinarizer` untuk mengubah tags menjadi format one-hot encoding, yang diperlukan untuk mempermudah representasi fitur kategori.
 
-- Data Preprocessing
-- TF-IDF Vectorizer Data Anime
-- Encoding Data User Rating
-- Train-test-split Data User Rating
+Proses tokenisasi deskripsi dilakukan dengan `Tokenizer` untuk mengubah teks deskripsi game menjadi format numerik, dan panjang sekuen diseragamkan dengan `pad_sequences`. Tokenisasi ini penting agar model dapat memahami teks deskripsi sebagai input numerik. Selain itu, harga game dinormalisasi menggunakan layer `Normalization` untuk mencegah skala fitur memengaruhi kinerja model. Positive ratio juga dinormalisasi dengan membagi nilainya dengan 100 untuk menyelaraskan skala target dengan fungsi aktivasi sigmoid di output.
 
-### Data Preprocessing
+#### Proses
 
-sebelumnya kita memiliki 3 file csv dan setelah di cek untuk melakukan Content Based Filtering kita cukup menggunakan dataset `anime-dataset-2023` dan untuk Collaborative Filtering kita cukup menggunakan `users-score-2023` yang kemudian akan disimpan kedalam 2 data frame Anime dan Rating.
+Data dibagi menjadi train dan test dengan rasio 80:20 menggunakan `train_test_split`. Fitur yang digunakan meliputi representasi kategori game dalam bentuk one-hot encoding untuk tags, representasi vektor dari teks deskripsi untuk deskripsi, serta fitur binary untuk menunjukkan dukungan platform (Windows, Mac, Linux, Steam Deck).
 
-#### **Penanganan Missing Value**
+### Modeling and Result
 
-- pada tahap Exploratory Data Analysis kita mengidentifikasi terdapat terdapat missing value pada dataset `user-details-2023.csv` pada atribut Username dengan jumlah 1 , Gender berjumlah 506907, Birthday berjumlah 563222, Location berjumlah 578485 dan pada dataset `user-score-2023.csv` missing value berjumlah 232 pada atribut username yang harus dihapus.
+#### Sistem Rekomendasi
 
-    `user_detail.dropna()`
+Model rekomendasi dirancang menggunakan pendekatan hybrid yang memadukan berbagai fitur, yaitu tags, deskripsi, dan platform.
 
-    `user_rating.dropna()`
+#### Arsitektur Model
 
-    total data setelah menghapus missig value pada kedua dataset seperti table berikut:
+Model memiliki tiga input layer: `tags_input` untuk fitur tags, `description_input` untuk fitur deskripsi, dan `platform_input` untuk fitur platform. Layer embedding digunakan untuk mempelajari representasi vektor dari deskripsi game. Dua hidden layers fully connected dengan aktivasi ReLU digunakan, diikuti oleh satu output layer dengan aktivasi sigmoid untuk memprediksi positive_ratio.
 
-    | Nama Dataset          | Jumah Baris | Jumlah Kolom |
-    | --------------------- | ----------- | ------------ |
-    | user-details-2023.csv | 731290      | 16           |
+#### Training dan Evaluasi
 
-    | Nama Dataset        | Jumah Baris | Jumlah Kolom |
-    | ------------------- | ----------- | ------------ |
-    | user-score-2023.csv | 24325191    | 5            |
+Model dilatih selama 50 epoch dengan batch size 32 menggunakan optimizer Adam, loss Mean Squared Error (MSE), dan metrics Mean Absolute Error (MAE). Hasil evaluasi menunjukkan performa baik dengan error rendah pada data test. Visualisasi grafik Loss dan MAE memperlihatkan tren penurunan yang konsisten selama pelatihan.
 
-### **Hapus beberapa atribut yang tidak terlalu penting pada dataframe Rating**
+![alt text](https://raw.githubusercontent.com/BagasAuliaAlfasyam/Project-2-Mahir-Dicoding-Machine-Learning/refs/heads/main/gambar/gambar15.png)
 
-`Rating = user_rating.drop(columns=['Anime Title', 'Username'])`
+#### Output Top-N Recommendation
 
-### **Menyamakan Anime Genres**
+Model digunakan untuk memprediksi positive_ratio pada 10 sampel game. Hasil prediksi ditampilkan dalam bentuk persentase untuk membantu pengguna memilih game terbaik berdasarkan prediksi model.
 
-| anime_id | Name                                              | Genres  |
-| -------- | ------------------------------------------------- | ------- |
-| 485      | Mahou no Princess Minky Momo                      | UNKNOWN |
-| 603      | Hikaru no Go: Hokuto Hai e no Michi               | UNKNOWN |
-| 894      | Shinshaku Sengoku Eiyuu Densetsu: Sanada Juu Y... | UNKNOWN |
-| 1096     | Nitaboh                                           | UNKNOWN |
-| 1115     | Ame to Shoujo to Watashi no Tegami                | UNKNOWN |
-| ...      | ...                                               | ...     |
-| 24528    | Shayou (Music)                                    | UNKNOWN |
-| 24549    | Telepath                                          | UNKNOWN |
-| 24635    | Slash                                             | UNKNOWN |
-| 24729    | The IDOLM@STER Cinderella Girls: U149 Recap       | UNKNOWN |
-| 24856    | Fins                                              | UNKNOWN |
+```output
+                                                   title  predicted_rating
+49826                                          Sole Saga         86.379143
+1360   Forza Horizon 4:  1977 Hoonigan Ford Gymkhana ...         79.322044
+29237                                        Exile's End         67.646233
+49474                    Realm Royale - Bass Drop Bundle         73.620468
+20970                             Pixel Puzzles: UndeadZ         69.672562
+48563                             X4: Cradle of Humanity         65.723648
+28220                                   Dungeons Forever         87.861725
+28095   Train Simulator: LNER Raven Q6 Steam Loco Add-On         67.258919
+4074             Euro Truck Simulator 2 - Viking Legends         82.841743
+3264                                       Find Yourself         84.825981
+```
 
-Karena setelah dicek terdapat value `UNKNOWN` pada atribut Genre maka akan kita hapus.
+#### Pendekatan Alternatif
 
-Karena dataframe Rating sangat banyak dan tidak sepadan dengan sumber daya yang saya miliki oleh karena itu kita akan mengambil beberap puluh ribu saja untuk dijadikan sample.
+Pendekatan pertama adalah content-based filtering, yang menggunakan informasi fitur konten untuk memberikan rekomendasi. Kelebihannya adalah tidak memerlukan data pengguna, namun kelemahannya adalah rentan terhadap cold start untuk konten baru. Pendekatan kedua adalah collaborative filtering, yang menggunakan data interaksi pengguna untuk menghasilkan rekomendasi yang lebih personal. Kelebihannya adalah dapat memberikan rekomendasi yang relevan berdasarkan preferensi pengguna lain, namun kekurangannya adalah rentan terhadap cold start untuk pengguna baru.
 
-**Mengapa diperlukan tahapan Data Preprocessing?**
+### Formula Matrix
 
-- Data preprocessing adalah tahap penting dalam analisis data dan pengembangan model machine learning, yang bertujuan untuk mempersiapkan data agar lebih bersih, relevan, dan siap digunakan. Tahapan ini diperlukan untuk mengurangi kebisingan (noise) dengan menghapus atribut yang tidak penting, seperti yang dilakukan pada dataframe Anime dan Rating, serta meningkatkan kualitas data dengan menghapus nilai yang tidak valid atau 'UNKNOWN' dalam atribut Genre. Selain itu, preprocessing mempercepat proses analisis dengan mengurangi jumlah data dan atribut yang tidak perlu, serta memudahkan pemrosesan data yang lebih terstruktur. Hal ini juga berkontribusi pada peningkatan kinerja model, karena model membutuhkan data yang bersih dan relevan untuk menghasilkan prediksi yang akurat. Dengan demikian, data preprocessing menyediakan basis yang solid untuk analisis lebih lanjut, memastikan bahwa data yang digunakan berkualitas tinggi dan mudah diolah.
+Model dilatih menggunakan fungsi *loss* Mean Squared Error (MSE):
 
-### TF-IDF Vectorizer Data Anime
+$$
+MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+$$
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image.png?raw=true)
+Dengan optimasi dilakukan menggunakan algoritma Adam.  
 
-- Mengubah data kedalam representasi numerik dengan TF-IDF Vectorizer sebelum tahap Modeling **Cosine Similiarity**
+Hasil evaluasi menunjukkan rata-rata kesalahan absolut (*Mean Absolute Error* atau MAE) sebagai berikut:
 
-**Mengapa diperlukan Mengubah data kedalam representasi numerik?**
+$$
+MAE = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|
+$$
 
-- Data perlu diubah kedalam representasi numerik karena sistem rekomendasi berbasis konten membutuhkan representasi numerik dari teks atau fitur kategori agar dapat mengukur kemiripan antar-item. Misalnya, dalam rekomendasi film, kategori seperti "Action," "Drama," atau "Fantasy" diubah menjadi nilai numerik untuk dihitung kemiripannya.
+### Kesimpulan - rekomendasi hybrid
 
-### Encoding Data User Rating
+1. Kelebihan
 
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-1.png?raw=true)
+   - Pendekatan Hybrid Dengan menggabungkan berbagai fitur (tags, deskripsi, dan platform), model dapat menghasilkan rekomendasi yang lebih relevan.
+   - Efisiensi Representasi Teks Penggunaan embedding layer memungkinkan model mempelajari representasi yang kaya dari deskripsi game.
+   - Normalisasi Data harga dan positive ratio meningkatkan stabilitas pelatihan.
 
-- Encoding data untuk sebelum tahap pemodelan **Collaborative Filtering**
+2. Kekurangan
 
-**Mengapa diperlukan melakukan Encoding data?**
+   - Kompleksitas Model Dengan banyaknya input dan layer, waktu pelatihan dan inferensi menjadi lebih lama dibandingkan pendekatan sederhana.
+   - Overfitting Model dengan banyak parameter memiliki risiko overfitting pada data latih jika tidak diatur dengan baik.
+   - Ketergantungan pada Data Tags Jika data tags tidak lengkap atau tidak relevan, rekomendasi model bisa menurun kualitasnya.
 
-- Encoding data perlu dilakukan karena pada Collaborative Filtering, model harus belajar dari pola interaksi pengguna terhadap item. Data perlu diubah ke dalam bentuk numerik agar model neural network dapat memprosesnya.
-
-### Train-test-split User Rating
-
-Selanjutnya, dilakukan train-test-split dengan pembagian data sebesar 80:20 antara data latih (train) dan data validasi.
-
-**Mengapa diperlukan melakukan Train-test-split data?**
-
-- Memisahkan data menjadi set pelatihan dan pengujian memungkinkan kita untuk mengevaluasi kinerja model pada data yang tidak pernah dilihat sebelumnya. Ini memberikan gambaran yang lebih akurat tentang seberapa baik model yg kita buat.
-
-## Modeling
-
-Pada tahapan model yang digunakan terdiri dari:
-
-- Cosine Similarity
-- RecomenderNet
-
-### 1. Cosine Similarity
-
-- **Cara Membuat Model**:
-
-    1. `from sklearn.metrics.pairwise import cosine_similarity`
-
-        - Mengimpor fungsi cosine_similarity dari modul sklearn.metrics.pairwise. Fungsi ini digunakan untuk menghitung kemiripan kosinus antar-vektor (contohnya, antar-vektor TF-IDF yang mewakili deskripsi atau genre anime).
-
-    2. `cosine_sim = cosine_similarity(tfidf_matrix)`
-
-        - Fungsi cosine_similarity menghitung kemiripan kosinus antara semua pasangan baris dalam matriks tfidf_matrix.
-
-    3. `cosine_sim = cosine_similarity(tfidf_matrix)`
-
-        - Fungsi cosine_similarity menghitung kemiripan kosinus antara semua pasangan baris dalam matriks tfidf_matrix.
-
-        - **Penjelasan Parameter**:
-
-            - tfidf_matrix: Matriks yang berisi nilai TF-IDF untuk masing-masing anime.
-
-    ![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-2.png?raw=true)
-
-    pada kode di atas, dengan menggunakan argpartition, kita mengambil sejumlah nilai k tertinggi dari similarity data (dalam kasus ini: dataframe cosine_sim_df). Kemudian, kita mengambil data dari bobot (tingkat kesamaan) tertinggi ke terendah. Data ini dimasukkan ke dalam variabel closest. Berikutnya, kita perlu menghapus nama_anime yang yang dicari agar tidak muncul dalam daftar rekomendasi. Dalam kasus ini, nanti kita akan mencari anime yang mirip dengan Tarareba, sehingga kita perlu drop nama_anime Tarareba agar tidak muncul dalam daftar rekomendasi yang diberikan nanti.
-
-- **Cara Kerja Pendekatan Content-based filtering:**
-
-    Content-based filtering mempelajari profil minat pengguna baru berdasarkan data dari objek yang telah dinilai pengguna. Algoritma ini bekerja dengan menyarankan item serupa yang pernah disukai di masa lalu atau sedang dilihat di masa kini kepada pengguna. Semakin banyak informasi yang diberikan pengguna, semakin baik akurasi sistem rekomendasi.
-
-  - **Kelebihan:**
-
-    - Tidak Bergantung pada Data Pengguna Lain: Hanya membutuhkan data dari item yang direkomendasikan, bukan dari perilaku pengguna lainnya.
-    - Personalisasi Berdasarkan Minat Pengguna: Memberikan rekomendasi berdasarkan profil pengguna atau riwayat preferensinya.
-    - Efektif untuk Pengguna Baru: Content-based filtering efektif untuk pengguna baru yang belum memiliki riwayat interaksi, selama ada cukup informasi tentang konten.
-
-  - **Kekurangan:**
-
-    - Keterbatasan dalam Diversifikasi: Cenderung merekomendasikan item yang serupa dengan yang sudah disukai pengguna, yang bisa membuat rekomendasi menjadi monoton.
-    - Ketergantungan pada Kualitas Fitur Konten: Jika fitur atau deskripsi konten terbatas atau kurang informatif, sistem akan sulit memberikan rekomendasi yang relevan.
-    - Tidak Memanfaatkan Informasi dari Pengguna Lain: Sistem ini tidak belajar dari interaksi atau preferensi pengguna lain, yang dapat mengurangi variasi rekomendasi.
-
-- **Cara Kerja Model Cosine Similiarity:**
-
-    Cosine similarity adalah teknik yang digunakan untuk mengukur seberapa mirip dua vektor, terlepas dari ukuran atau panjang vektor tersebut. Pendekatan ini banyak digunakan dalam rekomendasi berbasis konten untuk menilai kesamaan antara dua item (seperti film atau buku) berdasarkan fitur-fitur atau kata kunci yang mereka miliki.
-
-  - **Kelebihan**
-
-    - Independensi Magnitudo: Mengukur kesamaan berdasarkan sudut antara vektor, bukan panjangnya, sehingga efektif untuk data berdimensi tinggi.
-    - Efisiensi Komputasi: Perhitungan cepat dan sederhana, ideal untuk dataset besar.
-
-  - **Kekurangan**
-
-    - Mengabaikan Magnitudo: Tidak mempertimbangkan ukuran vektor, yang mungkin relevan dalam beberapa konteks.
-    - Sensitif terhadap Noise: Hasil dapat terpengaruh oleh fitur yang tidak relevan atau bising.
-
-### 2. RecomenderNet
-
-- **Cara Membuat Model**:
-
-    1. `import tensorflow as tflw`
-
-        - Mengimpor pustaka TensorFlow dan memberi nama alias tflw.
-
-    2. `from tensorflow import keras`
-
-        - Mengimpor sub-pustaka Keras dari TensorFlow.
-
-    3. `from tensorflow.keras import layers`
-
-        - Mengimpor modul layers dari Keras yang ada di dalam TensorFlow.
-
-    ![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-3.png?raw=true)
-
-    membuat class RecommenderNet dengan keras Model class. Kode class RecommenderNet ini terinspirasi dari tutorial dalam situs Keras dengan beberapa adaptasi sesuai kasus yang ingin diselesaikan.
-
-- **Cara Kerja Pendekatan Collaborative Filtering:**
-
-    Collaborative filtering menganalisis interaksi pengguna dengan item untuk memberikan rekomendasi. Algoritma ini bekerja dengan mencari pola dalam penilaian atau perilaku pengguna dan menyarankan item yang mungkin disukai berdasarkan preferensi pengguna lain yang memiliki kesamaan. Ada dua jenis utama dalam collaborative filtering: user-based yang mencocokkan pengguna serupa, dan item-based yang mencocokkan item yang sering dinilai tinggi oleh pengguna yang sama. Semakin banyak interaksi yang diperoleh, semakin baik akurasi sistem rekomendasi
-
-  - **Kelebihan:**
-
-    - Rekomendasi yang Personalisasi: Memberikan rekomendasi berdasarkan interaksi nyata pengguna, sehingga lebih sesuai dengan preferensi individu.
-    - Independen dari Konten: Tidak memerlukan pengetahuan mendalam tentang konten item, sehingga dapat digunakan untuk berbagai jenis item (film, buku, produk, dll).
-    - Mendapatkan Rekomendasi Baru: Dapat merekomendasikan item yang tidak dikenal sebelumnya oleh pengguna, membuka kesempatan untuk penemuan baru.
-
-  - **Kekurangan:**
-
-    - Cold Start Problem: Sulit memberikan rekomendasi yang akurat untuk pengguna baru atau item baru yang belum memiliki cukup interaksi.
-    - Data Sparsity: Jika data interaksi pengguna sangat sedikit, sulit untuk menemukan pola yang cukup untuk menghasilkan rekomendasi yang baik.
-    - Bias terhadap Popularitas: Cenderung merekomendasikan item yang sudah populer, sehingga item yang kurang dikenal bisa terabaikan meskipun mungkin relevan untuk pengguna tertentu.
-
-- **Cara Kerja Model RecommenderNet:**
-
-    RecommenderNet adalah model yang dirancang untuk memberikan rekomendasi kepada pengguna berdasarkan interaksi mereka dengan item sebelumnya. Model ini menggunakan teknik pembelajaran mendalam untuk mempelajari pola dan preferensi pengguna dari data historis. Proses ini melibatkan pengkodean informasi pengguna dan item ke dalam representasi vektor, yang kemudian digunakan untuk memprediksi preferensi pengguna terhadap item yang belum mereka lihat.
-
-  - **Kelebihan**
-
-    - Personalisasi Tinggi: Mampu menghasilkan rekomendasi yang sangat sesuai dengan preferensi individu pengguna berdasarkan analisis data historis.
-    - Kemampuan Menangkap Hubungan Kompleks: Dapat memahami dan memodelkan interaksi non-linear antara pengguna dan item, meningkatkan akurasi rekomendasi.
-
-  - **Kekurangan**
-    - Memerlukan Banyak Data: Kinerja optimal tergantung pada ketersediaan data yang cukup banyak dan beragam dari pengguna dan item.
-    - Kompleksitas Model: Lebih rumit dalam hal arsitektur dan pelatihan dibandingkan metode rekomendasi tradisional, memerlukan lebih banyak sumber daya komputasi.
-
-### Hasil Top-N Rekomendasi Model Cosine Similiarity
-
-| anime_id | Name            | Genres                 |
-| -------- | --------------- | ---------------------- |
-| 12335    | Hajimete no Gal | Comedy, Romance, Ecchi |
-
-| No  | Name                                              | Genres                 |
-| --- | ------------------------------------------------- | ---------------------- |
-| 0   | High School DxD New: Oppai, Tsutsumimasu!         | Comedy, Romance, Ecchi |
-| 1   | Love Hina Final Selection                         | Comedy, Romance, Ecchi |
-| 2   | Mujaki no Rakuen                                  | Comedy, Romance, Ecchi |
-| 3   | 1+2=Paradise                                      | Comedy, Romance, Ecchi |
-| 4   | Kimi ga Aruji de Shitsuji ga Ore de               | Comedy, Romance, Ecchi |
-| 5   | Gift: Eternal Rainbow - Ki no Saka Ryokan Kiki... | Comedy, Romance, Ecchi |
-| 6   | Maji de Watashi ni Koi Shinasai!                  | Comedy, Romance, Ecchi |
-| 7   | Dakara Boku wa, H ga Dekinai. Mie Sugi! Mizugi... | Comedy, Romance, Ecchi |
-| 8   | Sprite: Between Two Worlds                        | Comedy, Romance, Ecchi |
-| 9   | Megami no Café Terrace                            | Comedy, Romance, Ecchi |
-
-Berdasarkan hasil tabel di atas model `Cosine Similiarity` berhasil merekomendasikan Top-N anime dengan genre yang sama dengan anime Hajimete no Gal.
-
-### Hasil Top-N Rekomendasi RecommenderNet
-
-<br>
-
-=============================================
-
-**Menampilkan Rekomendasi untuk Pengguna: 707343**
-
-=============================================
-
-**Anime dengan Rating Tertinggi dari Pengguna**
-
-=============================================
-
-| Judul Anime   | Genre  |
-| ------------- | ------ |
-| **New Game!** | Comedy |
-
-=============================================
-
-**Rekomendasi 10 Anime Teratas**
-
-=============================================
-
-| No. | Judul Anime                                                   | Genre                              |
-| --- | ------------------------------------------------------------- | ---------------------------------- |
-| 1   | **s.CRY.ed**                                                  | Action, Adventure, Drama, Sci-Fi   |
-| 2   | **Slam Dunk**                                                 | Sports                             |
-| 3   | **Tactics**                                                   | Mystery, Supernatural              |
-| 4   | **One Piece Film: Strong World**                              | Action, Adventure, Fantasy         |
-| 5   | **Major S5**                                                  | Sports                             |
-| 6   | **Naruto: Shippuuden Movie 3 - Hi no Ishi wo Tsugu Mono**     | Action, Adventure, Fantasy         |
-| 7   | **Tegamibachi Reverse**                                       | Adventure, Fantasy                 |
-| 8   | **Natsume Yuujinchou San**                                    | Drama, Slice of Life, Supernatural |
-| 9   | **Haikyuu!! Karasuno Koukou vs. Shiratorizawa Gakuen Koukou** | Sports                             |
-| 10  | **Bocchi the Rock!**                                          | Comedy                             |
-
-Berdasarkan hasil tabel di atas model `RecommenderNet` berhasil merekomendasikan anime dengan rating tertinggi dari pengguna dan merekomendasikan Top-N anime teratas pada Pengguna: 707343.
-
-## Evaluation
-
-Pada project ini ada 2 matrix yang digunakan untuk mengevaluasi model yaitu _Precision_ dan _RMSE (Root Mean Squared Error)_ dengan penjelasan seeperti berikut:
-
-### Evaluasi Model _Cosine Similiarity_
-
-Model ini hanya menggunakan metrik Precision untuk mengetahui seberapa baik perforam model tersebut. Presisi adalah metrik yang biasa digunakan untuk mengevaluasi kinerja model pengelompokan. Metrik ini menghitung rasio antara nilai ground truth (nilai sebenarnya) dengan nilai prediksi yang positf. Perhitungan rasio ini dijabarkan melalui rumus di bawah ini:
-
-$$ Precision = \frac{TP}{TP + FP} $$
-
-Dimana:
-
-- TP (_True Positive_), jumlah kejadian positif yang diprediksi dengan benar.
-- FP (_False Positive_), jumlah kejadian positif yang diprediksi dengan salah.
-
-Berdasarkan hasil yang terdapat pada tahap Model and Result dapat dilihat bahwasanya besar presisi jika dihitung adalah 10/10 untuk rekomendasi Top-10. Ini menunjukan sistem mampu memberikan rekomendasi sesuai dengan Genres Animenya.
-
-### Evaluasi Model _RecommenderNet_
-
-Evaluasi metrik yang dapat digunakan untuk mengukur kinerja model ini adalah metrik RMSE (_Root Mean Squared Error_). RMSE adalah metode pengukuran dengan mengukur perbedaan nilai dari prediksi sebuah model sebagai estimasi atas nilai yang diobservasi. RMSE dapat dijabarkan melalui pendekatan rumus berikut ini
-
-$$ RMSE = \sqrt{\frac{\sum\_{t=1}^{n}(A_t - F_t)^2}{n}} $$
-
-Dimana:
-
-- $A_t$ : Nilai aktual
-- $F_t$ : Nilai hasil prediksi
-- n: Banyak data
-
-_Collaborative Filtering_ dengan model RecommenderNet memberikan hasil training yang divisualisasikan melalui gambar di bawah ini:
-
-![alt text](https://github.com/Agim-dudu/Sistem-Rekomendasi---Anime/blob/main/Resource/image-14.png?raw=true)
-
-Dengan epoch sebanyak 100, model ini memperoleh nilai error akhir sebesar sekitar 0.06 untuk training dan error pada data validasi sebesar 0.25. Nilai tersebut cukup bagus untuk sistem rekomendasi.
-
-Berdasarkan hasil yang didapat pada tahap Model and Result untuk user dengan id 707343 model berhasil merekomendasikan Anime dengan rating tertinggi dari pengguna dan Rekomendasi Top-10 anime teratas untuk user 707343.
+Model rekomendasi hybrid berhasil memadukan berbagai fitur untuk memberikan prediksi positive_ratio yang akurat. Dua pendekatan alternatif dapat digunakan tergantung kebutuhan, dengan kelebihan dan kekurangan masing-masing.
 
 ## Kesimpulan
 
-Dari hasil evaluasi, solusi sistem rekomendasi dengan pendekatan Content-Based Filtering dengan model Cosine Similarity dan Collaborative Filtering menggunakan model RecommenderNet menunjukkan bahwa kedua pendekatan ini berhasil mencapai tujuan proyek. Content-Based Filtering dengan model Cosine Similiarity memberikan rekomendasi anime yang relevan berdasarkan kesamaan genre dengan presisi tinggi, mencapai rekomendasi Top-10 yang sesuai kategori. Sementara itu, pendekatan Collaborative Filtering dengan model RecommenderNet menghasilkan rekomendasi anime berdasarkan pola rating pengguna dengan error yang rendah (RMSE sekitar 0.06 untuk data training dan 0.25 untuk data validasi), menunjukkan kemampuannya dalam memprediksi preferensi pengguna dengan akurat. Secara keseluruhan, kedua pendekatan ini berhasil memberikan rekomendasi yang relevan dan sesuai dengan tujuan utama, yaitu menyediakan rekomendasi anime yang sesuai dengan preferensi genre dan pola rating pengguna.
+1. EDA pada dataset rekomendasi membantu memahami pola, membersihkan data, dan mengevaluasi fitur yang relevan seperti genre, rating, dan platform.
+2. Dalam pengembangan sistem rekomendasi game, pendekatan Content-based Filtering menggunakan fitur seperti tags, deskripsi, dan data historis pengguna memungkinkan rekomendasi yang lebih personal.
+3. Hybrid Filtering menjadi solusi optimal dengan mengintegrasikan Content-based dan Collaborative Filtering untuk mengatasi keterbatasan seperti cold-start problem.
+4. Efektivitas sistem rekomendasi diukur menggunakan metrik seperti Precision, Recall, F1-Score, MAE, dan RMSE, yang memastikan hasil akurat dan sesuai kebutuhan pengguna.
+5. Sistem rekomendasi yang mempertimbangkan fitur seperti tags, deskripsi, platform, dan rating memberikan rekomendasi yang relevan dan kompatibel dengan preferensi serta perangkat pengguna.
 
 ## Referensi
 
