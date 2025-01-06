@@ -788,7 +788,56 @@ Meskipun demikian, metode ini memiliki beberapa keterbatasan. Karena hanya menga
 
 Kesuksesan relatif dari sistem rekomendasi ini membuka peluang untuk eksplorasi lebih lanjut dalam bidang recommender systems, khususnya untuk katalog game yang memiliki kekayaan deskriptif dan tema yang kompleks. Pendekatan content-based filtering membuktikan dirinya sebagai metode yang powerful dalam mengeksplorasi keterkaitan antar game berdasarkan karakteristik intrinsik mereka.
 
-# Sistem Rekomendasi Games - Collaborative Filtering
+## Evaluasi
+
+data untuk game yang menjadi target `("Prince of Persia: Warrior Within™")` dan daftar game yang direkomendasikan diambil dan disiapkan. Data ini berisi nama game yang relevan untuk dihitung precision-nya berdasarkan kesamaan tag antar game yang akan kita evaluasi.
+"""
+
+target_game = "Prince of Persia: Warrior Within™"
+recommended_games = [
+    "Prince of Persia®: The Sands of Time",
+    "Prince of Persia: The Two Thrones™",
+    "Prince of Persia®",
+    "Prince of Persia: The Forgotten Sands™",
+    "Legacy of Kain: Soul Reaver 2",
+    "DARK SOULS™ III - The Ringed City™",
+    "BERSERK and the Band of the Hawk",
+    "Dark Fantasy Warriors",
+    "Dark Cave",
+    "Dragon's Dogma: Dark Arisen"
+]
+
+"""Awalan yang dilakukan perhitungan Precision@10, yaitu metrik yang mengukur seberapa relevan rekomendasi yang diberikan. Precision dihitung dengan cara membandingkan tag dari game target dan tag dari game rekomendasi. Jika ada kesamaan lebih dari 50%, maka game tersebut dianggap relevan. Jumlah game relevan dibagi dengan jumlah total game yang direkomendasikan untuk menghitung precision"""
+
+target_tags = set(final_games[final_games['title'] == target_game]['tags'].iloc[0])
+relevant_count = 0
+
+for game in recommended_games:
+    game_tags = set(final_games[final_games['title'] == game]['tags'].iloc[0])
+    similarity = len(target_tags.intersection(game_tags)) / len(target_tags)
+    if similarity > 0.5:
+        relevant_count += 1
+
+precision_content = relevant_count / len(recommended_games)
+print(f"Content-based Precision@10: {precision_content:.3f}")
+
+"""Selanjutnya, pada cell ini, dilakukan perhitungan NDCG@10 (Normalized Discounted Cumulative Gain), yang digunakan untuk mengukur kualitas urutan rekomendasi. Relevance score dihitung dengan membandingkan tag yang ada pada game target dan game yang direkomendasikan. DCG dihitung berdasarkan relevansi game yang direkomendasikan, dan nilai IDCG dihitung untuk mendapatkan referensi idealnya. Nilai NDCG dihitung dengan membandingkan DCG dan IDCG."""
+
+relevance_scores = []
+dcg = 0
+for i, game in enumerate(recommended_games):
+    game_tags = set(final_games[final_games['title'] == game]['tags'].iloc[0])
+    relevance = len(target_tags.intersection(game_tags)) / len(target_tags)
+    relevance_scores.append(relevance)
+    dcg += relevance / np.log2(i + 2)
+
+"""Mengitung  NDCG@10"""
+
+idcg = sum([score / np.log2(i + 2) for i, score in enumerate(sorted(relevance_scores, reverse=True))])
+ndcg_content = dcg / idcg if idcg > 0 else 0
+print(f"Content-based NDCG@10: {ndcg_content:.3f}")
+
+"""# Sistem Rekomendasi Games - Collaborative Filtering
 
 Sistem rekomendasi ini menggunakan metode Collaborative Filtering untuk memberikan rekomendasi game berdasarkan preferensi pengguna. Pendekatan ini memanfaatkan kesamaan antara pengguna atau game untuk menghasilkan rekomendasi personal.
 
@@ -825,8 +874,6 @@ user_similarity_df = pd.DataFrame(
     index=user_item_matrix.index,
     columns=user_item_matrix.index
 )
-
-user_similarity
 
 """Penjelasan:
 
@@ -896,8 +943,6 @@ item_similarity_df = pd.DataFrame(
     columns=item_item_matrix.index
 )
 
-item_similarity_df
-
 """### Melakukan Pengujian Collaborative Filtering"""
 
 # Pilih game contoh
@@ -927,8 +972,144 @@ print(similar_games[['app_id', 'title', 'positive_ratio']])
 - Temukan 10 game terdekat
 - Saring dan ranking game berdasarkan rasio positif
 
-### **Kesimpulan**
-Metode Collaborative Filtering memungkinkan kita memberikan rekomendasi game yang personal dan relevan berdasarkan preferensi pengguna dan kesamaan antara pengguna atau game.
+### Evaluasi
+
+Di bagian ini, kita mendefinisikan dua set data: satu untuk rekomendasi yang diterima oleh pengguna (user_recommendations) dan satu untuk game serupa dengan `"Prince of Persia"` yang dapat digunakan dalam sistem rekomendasi berbasis item (similar_games). Masing-masing set data berisi informasi ID aplikasi, nama judul game, dan rasio positif pengguna.
+"""
+
+# Data rekomendasi untuk user 10317527
+user_recommendations = pd.DataFrame({
+    'app_id': [3590, 22320, 207140, 405830, 322170, 218620, 230410, 351910],
+    'title': [
+        "Plants vs. Zombies GOTY Edition",
+        "The Elder Scrolls III: Morrowind",
+        "SpeedRunners",
+        "Turok 2: Seeds of Evil",
+        "Geometry Dash",
+        "PAYDAY 2",
+        "Warframe",
+        "Valhalla Hills"
+    ],
+    'positive_ratio': [97, 95, 94, 93, 93, 89, 86, 61]
+})
+
+# Data rekomendasi game serupa dengan Prince of Persia
+similar_games = pd.DataFrame({
+    'app_id': [400630, 398850, 399640, 399820, 399810, 400130, 400360, 399120, 399420, 400250],
+    'title': [
+        "Wuppo: Definitive Edition",
+        "Epistory - Typing Chronicles",
+        "Flamebreak",
+        "Kopanito All-Stars Soccer",
+        "Call of Cthulhu®",
+        "Freedom Poopie",
+        "Adam's Venture: Origins",
+        "Prospekt",
+        "The Prism",
+        "Heaven Island - VR MMO"
+    ],
+    'positive_ratio': [95, 94, 93, 84, 78, 70, 66, 62, 62, 53]
+})
+
+"""Membuat dua dataset menggunakan pandas.DataFrame, yaitu user_recommendations untuk rekomendasi berbasis pengguna dan similar_games untuk rekomendasi berbasis item, yang mencakup ID aplikasi, judul game, dan rasio positif rating pengguna."""
+
+# Menghitung Average Precision untuk threshold rating tertentu
+def calculate_ap(recommendations, threshold=90):
+    relevant = recommendations['positive_ratio'] >= threshold
+    if not relevant.any():
+        return 0
+
+    precisions = []
+    num_relevant = 0
+
+    for i in range(len(recommendations)):
+        if recommendations.iloc[i]['positive_ratio'] >= threshold:
+            num_relevant += 1
+            precisions.append(num_relevant / (i + 1))
+
+    return np.mean(precisions)
+
+"""Fungsi `calculate_ap` digunakan untuk menghitung Average Precision (AP) berdasarkan ambang batas rating yang ditentukan. Fungsi ini menghitung presisi untuk setiap rekomendasi relevan dan merata-ratakannya untuk mendapatkan nilai AP."""
+
+# Menghitung MAP untuk berbagai threshold
+thresholds = [60, 70, 80, 90]
+user_maps = []
+similar_maps = []
+
+for threshold in thresholds:
+    user_ap = calculate_ap(user_recommendations, threshold)
+    similar_ap = calculate_ap(similar_games, threshold)
+
+    user_maps.append(user_ap)
+    similar_maps.append(similar_ap)
+
+"""Menghitung Mean Average Precision (MAP) untuk berbagai threshold rating (60, 70, 80, 90). Fungsi `calculate_ap` dipanggil untuk setiap threshold, baik untuk rekomendasi berbasis pengguna maupun berbasis item, dan hasilnya disimpan dalam list `user_maps` dan `similar_maps`.
+
+selanjutnya,  Mencetak hasil MAP untuk setiap threshold rating yang telah dihitung sebelumnya, baik untuk metode berbasis pengguna maupun berbasis item.
+"""
+
+# Print numerical results
+print("Mean Average Precision (MAP) Results:")
+for threshold, user_map, similar_map in zip(thresholds, user_maps, similar_maps):
+    print(f"\nThreshold {threshold}:")
+    print(f"User-based MAP: {user_map:.3f}")
+    print(f"Item-based MAP: {similar_map:.3f}")
+
+# Calculate overall MAP
+print("\nOverall MAP:")
+print(f"User-based: {np.mean(user_maps):.3f}")
+print(f"Item-based: {np.mean(similar_maps):.3f}")
+
+"""### Visualisasi
+
+Menampilkan grafik dengan sumbu X sebagai threshold rating dan sumbu Y sebagai skor MAP.
+"""
+
+plt.figure(figsize=(12, 6))
+
+# Plot MAP untuk berbagai threshold
+plt.subplot(1, 2, 1)
+plt.plot(thresholds, user_maps, marker='o', label='User-based')
+plt.plot(thresholds, similar_maps, marker='s', label='Item-based')
+plt.title('MAP at Different Rating Thresholds')
+plt.xlabel('Rating Threshold')
+plt.ylabel('MAP Score')
+plt.legend()
+plt.grid(True)
+
+"""Menghitung **Precision@K** untuk setiap peringkat rekomendasi (dari 1 hingga jumlah rekomendasi yang tersedia) dengan threshold rating 90. Precision dihitung dengan membandingkan jumlah rekomendasi relevan di peringkat `k`.
+
+"""
+
+# Plot Precision at different ranks (untuk threshold=90)
+ranks = list(range(1, min(len(user_recommendations), len(similar_games)) + 1))
+user_precision_at_k = []
+similar_precision_at_k = []
+
+for k in ranks:
+    user_precision = np.mean(user_recommendations.head(k)['positive_ratio'] >= 90)
+    similar_precision = np.mean(similar_games.head(k)['positive_ratio'] >= 90)
+
+    user_precision_at_k.append(user_precision)
+    similar_precision_at_k.append(similar_precision)
+
+"""Menampilkan grafik **Precision@K** pada peringkat `K` yang berbeda, membandingkan metode berbasis pengguna dan berbasis item."""
+
+plt.subplot(1, 2, 2)
+plt.plot(ranks, user_precision_at_k, marker='o', label='User-based')
+plt.plot(ranks, similar_precision_at_k, marker='s', label='Item-based')
+plt.title('Precision@K (Threshold=90)')
+plt.xlabel('K')
+plt.ylabel('Precision')
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+"""### Kesimpulan
+
+Dari hasil yang tercetak, kita dapat menarik kesimpulan bahwa baik **user-based** maupun **item-based** memberikan hasil yang sangat baik pada semua threshold yang diuji (60, 70, 80, 90). Nilai **Mean Average Precision (MAP)** yang mencapai 1.000 pada setiap threshold menunjukkan bahwa kedua metode ini berhasil memberikan rekomendasi yang sangat relevan pada setiap peringkat, baik untuk rekomendasi berbasis pengguna maupun berbasis item. Ini menandakan bahwa kedua metode tersebut sangat efektif dalam menyediakan rekomendasi yang sesuai dengan preferensi pengguna dan kualitas item terkait, terlepas dari ambang batas rating yang digunakan. Secara keseluruhan, baik pendekatan user-based maupun item-based memberikan performa yang sangat optimal pada dataset ini.
 
 # Sistem Rekomendasi Games - Hybrid Recommendation System
 
@@ -1047,7 +1228,10 @@ history = recommender_model.fit(
     batch_size=32
 )
 
-"""Mengevaluasi model pada data test dan mencetak Mean Absolute Error (MAE)."""
+"""### Evaluasi
+
+Mengevaluasi model pada data test dan mencetak Mean Absolute Error (MAE).
+"""
 
 # Evaluasi model
 loss, mae = recommender_model.evaluate(
@@ -1055,6 +1239,20 @@ loss, mae = recommender_model.evaluate(
     y_test
 )
 print(f"Mean Absolute Error: {mae}")
+
+def evaluate_hybrid(predictions, actual):
+    mse = np.mean((predictions - actual) ** 2)
+    mae = np.mean(np.abs(predictions - actual))
+    rmse = np.sqrt(mse)
+
+    return mse, mae, rmse
+
+mse, mae, rmse = evaluate_hybrid(recommender_model.predict([X_train_tags, X_train_desc, X_train_platform]), y_train)
+
+print(f"\nHybrid System Metrics:")
+print(f"MSE: {mse:.3f}")
+print(f"MAE: {mae:.3f}")
+print(f"RMSE: {rmse:.3f}")
 
 """### Visualisasi
 
