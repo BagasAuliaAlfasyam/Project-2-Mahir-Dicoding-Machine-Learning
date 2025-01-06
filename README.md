@@ -513,11 +513,13 @@ diagram ini menunjukkan bahwa meskipun ada berbagai tingkat diskon yang diterapk
 
 Diagram ini menunjukkan hubungan antara jumlah review pengguna dan rasio review positif. Sebagian besar game memiliki rasio review positif tinggi, terutama di atas 80%, dengan hanya sedikit game yang memiliki rasio di bawah 40%. Kebanyakan game juga memiliki jumlah review yang rendah, dengan beberapa outlier yang memiliki jumlah review sangat tinggi, mencapai lebih dari 1 juta. Tidak ada hubungan yang jelas antara jumlah review dan rasio review positif, karena game dengan review sedikit maupun banyak dapat memiliki rasio positif yang tinggi. Outliers dengan lebih dari 3 juta review umumnya memiliki rasio positif di atas 60%. Secara keseluruhan, diagram ini menunjukkan bahwa banyak game memiliki rasio review positif tinggi terlepas dari jumlah review yang diterima, meskipun ada variabilitas signifikan dalam data.
 
-## Sistem Rekomendasi Games - Content-based Filtering
+## Data Preparation
 
-### Data Preparation
+### Content-based Filtering preparation
 
-Tahap persiapan data merupakan fondasi kritis dalam membangun sistem rekomendasi. Proses ini dimulai dengan seleksi kolom yang paling relevan untuk menganalisis karakteristik game. Dengan memilih kolom seperti `app_id`, `title`, `description`, dan `tags`, kita membatasi dataset pada informasi esensial yang akan digunakan untuk memahami keunikan setiap game.
+#### 1. Pemilihan Data
+
+Tahap pemilihan data merupakan fondasi kritis dalam membangun sistem rekomendasi. Proses ini dimulai dengan seleksi kolom yang paling relevan untuk menganalisis karakteristik game. Dengan memilih kolom seperti `app_id`, `title`, `description`, dan `tags`, kita membatasi dataset pada informasi esensial yang akan digunakan untuk memahami keunikan setiap game.
 
 ```python
 df = final_games[['app_id', 'title','description', 'tags']]
@@ -541,7 +543,7 @@ Kita membuat dataframe final dengan menyeleksi kolom-kolom `app_id`, `title`, da
 final_df = df[['app_id','title','overview']]
 ```
 
-### Preprocessing Teks
+#### 2. Preprocessing Teks
 
 Preprocessing teks adalah tahap transformasi data mentah menjadi format yang lebih terstruktur dan siap untuk dianalisis. Tahap ini sangat penting untuk memastikan data teks yang digunakan dalam analisis bebas dari elemen-elemen yang dapat mengganggu, seperti tanda baca, karakter khusus, dan simbol-simbol lain yang tidak relevan. Salah satu langkah kunci dalam preprocessing teks adalah pembersihan karakter khusus. Proses ini bertujuan untuk menghilangkan elemen-elemen yang tidak diperlukan, sehingga teks menjadi lebih bersih dan mudah dianalisis. Dengan melakukan pembersihan karakter khusus, kita dapat meningkatkan akurasi model analisis teks dan memastikan bahwa hasil analisis lebih dapat diandalkan.
 
@@ -569,7 +571,7 @@ Manfaat dari tahap ini meliputi:
 3. **Mudah Diproses:** Teks yang telah diproses lebih mudah untuk dianalisis dan diproses lebih lanjut dalam tahap-tahap berikutnya.
 4. **Memperbaiki Kinerja Model:** Model machine learning dan analisis teks dapat berjalan lebih efisien dan efektif dengan data yang telah diproses dengan baik.
 
-### Stemming Teks
+#### 3. Stemming Teks
 
 Stemming merupakan teknik penting dalam pengolahan bahasa alami yang mengubah kata ke bentuk dasarnya. Ini mengurangi variasi linguistik dan menyederhanakan analisis. Dengan menggunakan Porter Stemmer, kita dapat mengelompokkan kata-kata yang memiliki akar yang sama.
 
@@ -592,7 +594,7 @@ df['overview'] = df['overview'].apply(stem)
 
 Penerapan ini memastikan bahwa setiap kata dalam kolom `overview` diubah ke bentuk dasarnya, membantu mengurangi variasi kata dan menyederhanakan analisis selanjutnya. Manfaatnya termasuk meningkatkan konsistensi data dan efisiensi dalam proses analisis teks.
 
-### Vektorisasi Teks dan Similarity
+#### 4. Vektorisasi Teks dan Similarity
 
 Vektorisasi adalah proses mengubah teks menjadi representasi numerik yang dapat dianalisis menggunakan metode komputasi. Count Vectorizer digunakan untuk mengkonversi teks menjadi vektor, dengan pembatasan fitur untuk efisiensi komputasi.
 
@@ -620,9 +622,123 @@ similarity = cosine_similarity(vectors)
 
 Dalam proses ini, teks diubah menjadi vektor numerik menggunakan Count Vectorizer, yang membatasi jumlah fitur hingga 1500 dan mengabaikan stop words dalam bahasa Inggris. Setelah itu, vektor numerik tersebut digunakan untuk menghitung kesamaan antar teks menggunakan metrik kesamaan kosinus. Hal ini memungkinkan kita untuk mengukur seberapa mirip teks satu dengan yang lainnya, yang sangat berguna dalam berbagai analisis teks seperti clustering dan rekomendasi.
 
-### Fungsi Rekomendasi
+----------------------------------------------------------------
 
-Fungsi rekomendasi merupakan inti dari sistem content-based filtering. Fungsi ini mengambil sebuah game sebagai input, kemudian mencari game-game lain yang memiliki kesamaan konten berdasarkan vektor similaritas yang telah dihitung.
+### Collaborative Filtering Preparation
+
+#### 1. Persiapan Matriks Rekomendasi User-Games
+
+Pada tahap ini, kita membuat matriks yang menunjukkan hubungan antara pengguna dan game. Setiap sel dalam matriks berisi **1** jika game direkomendasikan untuk pengguna tersebut, dan **0** jika tidak. Metode `pivot_table()` digunakan untuk mengubah data mentah menjadi format matriks yang dapat dianalisis.
+
+Berikut implementasinya:
+
+```python
+# Membuat matriks pivot yang menghubungkan user dengan game yang direkomendasikan
+user_item_matrix = sample_recommendations.pivot_table(
+    index='user_id',
+    columns='app_id',
+    values='is_recommended',
+    aggfunc='first'
+).fillna(0)
+```
+
+#### 2. Menghitung Kesamaan Antar Pengguna
+
+Pada tahap ini, kita menghitung kesamaan antara pengguna menggunakan **cosine similarity**. Metode ini mengukur kosinus sudut antara vektor preferensi game setiap pengguna. Semakin dekat nilai kosinus sudutnya ke **1**, semakin mirip preferensi game antara dua pengguna.
+
+Berikut implementasinya:
+
+```python
+# Menghitung cosine similarity antar user
+user_similarity = cosine_similarity(user_item_matrix)
+user_similarity_df = pd.DataFrame(
+    user_similarity,
+    index=user_item_matrix.index,
+    columns=user_item_matrix.index
+)
+```
+
+Tujuannya di sini adalah untuk mengidentifikasi pengguna dengan selera game yang serupa. Dengan menggunakan kesamaan kosinus, sistem:
+
+- Mengukur "sudut" antara vektor preferensi pengguna.
+- Menentukan seberapa dekat preferensi game dua pengguna selaras.
+- Memungkinkan menemukan pengguna "serupa" yang mungkin menikmati jenis game yang sama.
+
+Bayangkan ini seperti menemukan teman dengan daftar putar musik yang hampir identik - jika dua pengguna menyukai game yang sangat mirip, mereka cenderung menikmati rekomendasi tambahan dari riwayat permainan satu sama lain.
+
+#### 3. Persiapan Matriks Rekomendasi Games-Games
+
+Serupa dengan matriks user-game, tetapi kali ini kita membalik perspektif: sekarang matriks menghubungkan game dengan pengguna yang merekomendasikannya.
+
+Berikut implementasinya:
+
+```python
+# Buat matriks item-item
+item_item_matrix = sample_recommendations.pivot_table(
+    index='app_id',
+    columns='user_id',
+    values='is_recommended',
+    aggfunc='first'
+).fillna(0)
+```
+
+Matriks ini memungkinkan analisis hubungan antar game. Perspektif ini berguna untuk memahami apakah ada game yang memiliki pola rekomendasi serupa di antara pengguna.
+
+#### 4. Menghitung Kesamaan Antar Game
+
+Tahap ini menghitung kesamaan antar game menggunakan **cosine similarity**, mirip dengan perhitungan kesamaan antar pengguna sebelumnya.
+
+Berikut implementasinya:
+
+```python
+# Menghitung cosine similarity antar game
+item_similarity = cosine_similarity(item_item_matrix)
+item_similarity_df = pd.DataFrame(
+    item_similarity,
+    index=item_item_matrix.index,
+    columns=item_item_matrix.index
+)
+```
+
+----------------------------------------------------------------
+
+### Hybrid Recommendation System preparation
+
+#### 1. Konversi Tags ke Format List
+
+Langkah pertama adalah mengonversi tipe data `tags` dari tuple menjadi list menggunakan `final_games['tags_list'] = final_games['tags'].apply(list)`. Ini dilakukan agar format data lebih mudah diolah dengan `MultiLabelBinarizer` untuk representasi fitur kategori.
+
+#### 2. One-Hot Encoding pada Tags
+
+Selanjutnya, dilakukan proses one-hot encoding pada kolom `tags_list` menggunakan `MultiLabelBinarizer`. Proses ini menghasilkan representasi binary untuk setiap tag, sehingga model dapat memahami hubungan antar kategori secara numerik.
+
+#### 3. Tokenisasi dan Padding Deskripsi
+
+Deskripsi game kemudian diubah menjadi format numerik melalui tokenisasi menggunakan `Tokenizer`. Teks deskripsi diubah menjadi urutan angka dengan `tokenizer.texts_to_sequences`, dan panjang sekuen diseragamkan menggunakan `pad_sequences` dengan panjang maksimum 200. Hal ini memastikan konsistensi input model.
+
+#### 4. Normalisasi Harga
+
+Harga game dinormalisasi menggunakan layer `Normalization`. Nilai harga diadaptasi terlebih dahulu dengan `price_normalizer.adapt`, kemudian dinormalisasi agar skala fitur tidak mendominasi selama proses pelatihan.
+
+#### 5. Normalisasi Positive Ratio
+
+Positive ratio dinormalisasi dengan membaginya dengan 100, sehingga nilainya berada dalam rentang [0,1] untuk selaras dengan fungsi aktivasi sigmoid yang digunakan di output.
+
+#### 6. Representasi Dukungan Platform
+
+Dukungan platform (Windows, Mac, Linux, Steam Deck) direpresentasikan sebagai fitur binary. Kolom ini langsung diambil dari dataset menggunakan `final_games[['windows', 'mac', 'linux', 'steam_deck']].values` untuk mempermudah pemrosesan.
+
+#### 7. Pembagian Data Train dan Test
+
+Terakhir, data dibagi menjadi train dan test dengan rasio 80:20 menggunakan `train_test_split`. Fitur yang digunakan meliputi representasi one-hot encoding untuk tags, urutan numerik dari deskripsi, harga yang telah dinormalisasi, dan fitur binary dari platform. Targetnya adalah nilai positive ratio yang telah dinormalisasi.
+
+----------------------------------------------------------------
+
+## Model and Results
+
+### Sistem Rekomendasi Games - Content-based Filtering
+
+Implementasi Fungsi rekomendasi yang merupakan inti dari sistem content-based filtering. Fungsi ini mengambil sebuah game sebagai input, kemudian mencari game-game lain yang memiliki kesamaan konten berdasarkan vektor similaritas yang telah dihitung.
 
 Berikut adalah implementasi fungsi rekomendasi:
 
@@ -652,8 +768,6 @@ Setelah mendapatkan vektor similaritas, fungsi mengurutkan game-game dalam datas
 
 Akhirnya, fungsi mencetak judul-judul game yang paling mirip dengan game yang dipilih, sebanyak 10 game teratas. Ini memberikan rekomendasi kepada pengguna tentang game-game lain yang mungkin menarik bagi mereka berdasarkan kesamaan konten dengan game yang dipilih.
 
-### Pengujian Penggunaan Sistem Rekomendasi
-
 ```python
 recommend('Prince of Persia: Warrior Within™')
 ```
@@ -676,9 +790,9 @@ Akhirnya, fungsi mencetak judul-judul game yang paling mirip dengan game yang di
 
 Dengan implementasi ini, sistem rekomendasi berhasil menyelesaikan permasalahan dengan menyediakan rekomendasi game berdasarkan kesamaan konten, serta menyajikan top-N recommendation sebagai output, yang dalam hal ini adalah 10 game teratas yang paling mirip.
 
-### Formula Evaluasi Matrix Similarity
+#### Formula Matrix Similarity
 
-#### Cosine Similarity
+***Cosine Similarity***
 
 Cosine similarity digunakan untuk mengukur kesamaan antara dua vektor non-zero dalam ruang multi-dimensi. Dalam konteks sistem rekomendasi game, formula ini membantu menentukan seberapa mirip konten antar game.
 
@@ -692,7 +806,6 @@ Dimana:
 - $\theta$ adalah sudut antara kedua vektor
 
 **Perhitungan Detail**
-
 $$cos(\theta) = \frac{\sum_{i=1}^{n} A_i \times B_i}{\sqrt{\sum_{i=1}^{n} A_i^2} \times \sqrt{\sum_{i=1}^{n} B_i^2}}$$
 
 Interpretasi Nilai
@@ -710,7 +823,7 @@ Misal vektor game:
 
 $$cos(\theta) = \frac{(1 \times 2) + (2 \times 3) + (3 \times 4)}{\sqrt{1^2 + 2^2 + 3^2} \times \sqrt{2^2 + 3^2 + 4^2}}$$
 
-##### Implementasi dalam Kode
+#### **Implementasi dalam Kode**
 
 ```python
 from sklearn.metrics.pairwise import cosine_similarity
@@ -719,60 +832,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 similarity_matrix = cosine_similarity(game_vectors)
 ```
 
-**Kelebihan Metode**
+**Kelebihan** **Metode**
 
 - Tidak terpengaruh ukuran vektor
 - Fokus pada arah vektor, bukan magnitudo
 - Cocok untuk data berdimensi tinggi
 
-**Kekurangan Metode**
+**Kekurangan** **Metode**
 
 - Tidak mempertimbangkan konteks semantik
 - Sensitif terhadap preprocessing teks
 
-## Sistem Rekomendasi Games - Collaborative Filtering
+### Sistem Rekomendasi Games - Collaborative Filtering
 
-### Persiapan Matriks Rekomendasi User-Games
-
-Pada tahap ini, kita membuat matriks yang menunjukkan hubungan antara pengguna dan game. Setiap sel dalam matriks berisi 1 jika game direkomendasikan untuk pengguna tersebut, dan 0 jika tidak. Metode pivot_table() digunakan untuk mengubah data mentah menjadi format matriks yang dapat dianalisis.
-
-Berikut implementasinya
-
-```python
-# Membuat matriks pivot yang menghubungkan user dengan game yang direkomendasikan
-user_item_matrix = sample_recommendations.pivot_table(
-    index='user_id',
-    columns='app_id',
-    values='is_recommended',
-    aggfunc='first'
-).fillna(0)
-```
-
-### Menghitung Kesamaan Antar Pengguna
-
-Tahap ini menghitung kesamaan antara pengguna menggunakan cosine similarity. Metode ini mengukur kosinus sudut antara vektor preferensi game setiap pengguna. Semakin dekat kosinus sudutnya, semakin mirip preferensi game antara dua pengguna.
-
-Berikut implementasinya
-
-```python
-# Menghitung cosine similarity antar user
-user_similarity = cosine_similarity(user_item_matrix)
-user_similarity_df = pd.DataFrame(
-    user_similarity,
-    index=user_item_matrix.index,
-    columns=user_item_matrix.index
-)
-```
-
-Tujuannya di sini adalah untuk mengidentifikasi pengguna dengan selera game yang sama. Dengan menggunakan kesamaan kosinus, sistem:
-
-- Mengukur "sudut" antara vektor preferensi pengguna
-- Menentukan seberapa dekat preferensi game dua pengguna selaras
-- Memungkinkan menemukan pengguna "serupa" yang mungkin menikmati jenis game yang sama
-
-Bayangkan ini seperti menemukan teman dengan daftar putar musik yang hampir identik - jika dua pengguna menyukai game yang sangat mirip, mereka cenderung menikmati rekomendasi tambahan dari riwayat permainan satu sama lain.
-
-### Pengujian Sistem Rekomendasi untuk Pengguna Tertentu
+#### Pengujian Sistem Rekomendasi untuk Pengguna Tertentu
 
 Pada tahap ini, kita mengambil seorang pengguna contoh `(user ID 10317527)`, mencari pengguna-pengguna yang memiliki preferensi serupa, kemudian mengumpulkan game yang direkomendasikan oleh pengguna serupa. Hasilnya adalah 10 game teratas berdasarkan rasio positif.
 
@@ -817,39 +890,7 @@ Recommended games for user 10317527:
 
  Sistem mencari pengguna-pengguna dengan preferensi serupa, kemudian mengumpulkan dan meranking game yang direkomendasikan oleh pengguna serupa tersebut terdapat 10 rekomendasi game untuk user `10317527`.
 
-### Persiapan Matriks Rekomendasi Games-games
-
-Serupa dengan matriks user-game, tetapi kali ini kita membalik perspektif: sekarang matriks menghubungkan game dengan pengguna yang merekomendasikannya.
-
-Berikut implementasinya
-
-```python
-# Buat matriks item-item
-item_item_matrix = sample_recommendations.pivot_table(
-    index='app_id',
-    columns='user_id',
-    values='is_recommended',
-    aggfunc='first'
-).fillna(0)
-```
-
-Membalik perspektif matriks sebelumnya. Kali ini, matriks menghubungkan game dengan pengguna yang merekomendasikannya. Hal ini memungkinkan analisis hubungan antar game.
-
-### Hitung similarity antar item
-
-Tahap ini menghitung kesamaan antar game menggunakan cosine similarity, mirip dengan perhitungan kesamaan antar pengguna sebelumnya.
-
-```python
-# Menghitung cosine similarity antar game
-item_similarity = cosine_similarity(item_item_matrix)
-item_similarity_df = pd.DataFrame(
-    item_similarity,
-    index=item_item_matrix.index,
-    columns=item_item_matrix.index
-)
-```
-
-### Melakukan Pengujian Collaborative Filtering
+#### Melakukan Pengujian Collaborative Filtering
 
 ```python
 # Memilih game contoh dan mencari game serupa
@@ -914,7 +955,7 @@ Tes akhir menunjukkan dua strategi rekomendasi:
 Misalnya, saat melihat "Prince of Persia: Warrior Within", sistem menemukan 10 game dengan pola rekomendasi pengguna yang serupa. sistem rekomendasi ini seperti versi yang sangat canggih dari "Jika Anda menyukai ini, Anda mungkin juga menyukai...". Ini menggunakan teknik matematika untuk menemukan pola dalam cara pengguna merekomendasikan game, menciptakan mesin rekomendasi yang cerdas dan berbasis data.
 Dengan menggabungkan kesamaan pengguna dan kesamaan game, sistem dapat memberikan rekomendasi yang dipersonalisasi yang melampaui pencocokan genre sederhana, dengan mempertimbangkan preferensi pengguna dan karakteristik game yang bernuansa.
 
-### **Evaluasi Matrix**
+#### **Evaluasi Matrix**
 
 Cosine similarity mengukur kesamaan antara dua vektor \( A \) dan \( B \) berdasarkan sudut di antara keduanya. Rumusnya adalah:
 
@@ -923,6 +964,7 @@ $$
 $$
 
 Dimana:
+
 - **Dot product** \( A \cdot B \) dihitung sebagai:
   $$
   A \cdot B = \sum_{i=1}^n (A_i \cdot B_i)
@@ -944,8 +986,11 @@ $$
 $$
 
 #### **Penerapan pada Matriks Rekomendasi**
+
 Dalam konteks matriks rekomendasi:
-1. **Vektor \( A \) dan \( B \):** Representasi preferensi pengguna atau item.
+
+1. **Vektor \( A \) dan \( B \):** Representasi preferensi
+pengguna atau item.
    - Contoh: Pada matriks **user-item**, \( A \) dapat berupa preferensi pengguna pertama, dan \( B \) adalah preferensi pengguna kedua.
 2. **Komponen Matriks:**
    - **User-user similarity:** Kemiripan antar pengguna dihitung dari vektor pengguna pada matriks **user-item**.
@@ -954,7 +999,7 @@ Dalam konteks matriks rekomendasi:
    - Biner (\( 0/1 \)) jika hanya menunjukkan ada atau tidak preferensi.
    - Skalar (misalnya rating) jika menunjukkan tingkat preferensi.
 
-### **Kelebihan dan Kekurangan Matriks Cosine Similarity Gabungan**
+#### **Kelebihan dan Kekurangan Matriks Cosine Similarity Gabungan**
 
 #### **Kelebihan**
 
@@ -970,21 +1015,7 @@ Untuk mengatasi keterbatasan ini, para praktisi umumnya merekomendasikan pendeka
 
 Dengan pemahaman yang mendalam tentang kelebihan dan kekurangan metode ini, pengembang dapat merancang sistem rekomendasi yang lebih cerdas, adaptif, dan memenuhi kebutuhan spesifik dari berbagai jenis dataset dan konteks penggunaan.
 
-## Sistem Rekomendasi Games - Hybrid Recommendation System
-
-### Data Preparation
-
-#### Teknik yang Digunakan
-
-Konversi tipe data tags dilakukan dengan menggunakan `final_games['tags_list'] = final_games['tags'].apply(list)` untuk mengubah tipe data tags dari tuple menjadi list. Hal ini dilakukan karena format list mempermudah proses encoding dengan `MultiLabelBinarizer`. Selanjutnya, teknik multi-label binarization diterapkan menggunakan `MultiLabelBinarizer` untuk mengubah tags menjadi format one-hot encoding, yang diperlukan untuk mempermudah representasi fitur kategori.
-
-Proses tokenisasi deskripsi dilakukan dengan `Tokenizer` untuk mengubah teks deskripsi game menjadi format numerik, dan panjang sekuen diseragamkan dengan `pad_sequences`. Tokenisasi ini penting agar model dapat memahami teks deskripsi sebagai input numerik. Selain itu, harga game dinormalisasi menggunakan layer `Normalization` untuk mencegah skala fitur memengaruhi kinerja model. Positive ratio juga dinormalisasi dengan membagi nilainya dengan 100 untuk menyelaraskan skala target dengan fungsi aktivasi sigmoid di output.
-
-#### Proses
-
-Data dibagi menjadi train dan test dengan rasio 80:20 menggunakan `train_test_split`. Fitur yang digunakan meliputi representasi kategori game dalam bentuk one-hot encoding untuk tags, representasi vektor dari teks deskripsi untuk deskripsi, serta fitur binary untuk menunjukkan dukungan platform (Windows, Mac, Linux, Steam Deck).
-
-### Modeling and Result
+### Sistem Rekomendasi Games - Hybrid Recommendation System
 
 #### Sistem Rekomendasi
 
@@ -1022,7 +1053,7 @@ Model digunakan untuk memprediksi positive_ratio pada 10 sampel game. Hasil pred
 
 Pendekatan pertama adalah content-based filtering, yang menggunakan informasi fitur konten untuk memberikan rekomendasi. Kelebihannya adalah tidak memerlukan data pengguna, namun kelemahannya adalah rentan terhadap cold start untuk konten baru. Pendekatan kedua adalah collaborative filtering, yang menggunakan data interaksi pengguna untuk menghasilkan rekomendasi yang lebih personal. Kelebihannya adalah dapat memberikan rekomendasi yang relevan berdasarkan preferensi pengguna lain, namun kekurangannya adalah rentan terhadap cold start untuk pengguna baru.
 
-### Formula Matrix
+#### Formula Matrix
 
 Model dilatih menggunakan fungsi *loss* Mean Squared Error (MSE):
 
@@ -1038,7 +1069,7 @@ $$
 MAE = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|
 $$
 
-### Kesimpulan - rekomendasi hybrid
+#### Kesimpulan - rekomendasi hybrid
 
 1. Kelebihan
 
@@ -1054,25 +1085,49 @@ $$
 
 Model rekomendasi hybrid berhasil memadukan berbagai fitur untuk memberikan prediksi positive_ratio yang akurat. Dua pendekatan alternatif dapat digunakan tergantung kebutuhan, dengan kelebihan dan kekurangan masing-masing.
 
+## Evaluation
+
+### **Content-Based Filtering**
+
+Pada sistem berbasis konten, rekomendasi diberikan berdasarkan kesamaan tag antara game target, *Prince of Persia: Warrior Within™*, dengan game lainnya. Evaluasi menunjukkan bahwa **Precision@10** mencapai nilai **0.700**, yang berarti 70% dari 10 rekomendasi teratas relevan dengan game target. Hal ini mencerminkan kualitas yang baik dalam menyaring game dengan kesamaan yang tinggi.
+
+Selain itu, metrik **NDCG@10** atau *Normalized Discounted Cumulative Gain* menghasilkan nilai **0.992**, yang hampir mendekati sempurna. NDCG mengukur kualitas urutan rekomendasi, menunjukkan bahwa game yang lebih relevan ditempatkan di posisi lebih tinggi dalam daftar rekomendasi. Perhitungan NDCG dilakukan dengan membandingkan relevansi aktual setiap rekomendasi dengan relevansi terbaik yang mungkin dicapai (ideal ranking).
+
+Kode yang digunakan untuk menghitung Precision@10 menghitung jumlah rekomendasi yang memiliki kesamaan tag lebih dari 50% dengan game target. Untuk NDCG, relevansi dihitung berdasarkan tingkat kesamaan, dan skor dihitung menggunakan logaritma posisi setiap game dalam daftar rekomendasi.
+
+### **Collaborative Filtering**
+
+Pada sistem berbasis kolaborasi, evaluasi dilakukan dengan menggunakan **Mean Average Precision (MAP)** pada berbagai ambang batas *positive ratio* (60, 70, 80, dan 90). Hasil evaluasi menunjukkan bahwa baik rekomendasi berbasis pengguna maupun item berhasil mencapai MAP sebesar **1.000** untuk semua ambang batas. Ini berarti semua rekomendasi yang diberikan relevan dengan ambang batas tertentu, sehingga kinerja sistem dapat dianggap sangat baik.
+
+Perhitungan MAP dilakukan dengan menghitung *precision* kumulatif untuk setiap item relevan yang ditemukan dalam daftar rekomendasi, kemudian dirata-ratakan. Hasil ini menunjukkan kemampuan model untuk memberikan rekomendasi yang sangat relevan, terutama dalam memenuhi preferensi pengguna pada rating positif yang tinggi.
+
+### **Hybrid System**
+
+Sistem hybrid menggabungkan beberapa informasi, seperti tag, deskripsi, dan platform, untuk memberikan rekomendasi yang lebih personal. Evaluasi dilakukan menggunakan **Mean Absolute Error (MAE)** pada data pengujian, yang menghasilkan nilai **0.1345**. Nilai MAE yang kecil ini menunjukkan bahwa prediksi rating oleh sistem sangat dekat dengan nilai aktualnya.
+
+Selain itu, evaluasi pada data pelatihan memberikan metrik tambahan, yaitu **Mean Squared Error (MSE)** sebesar **0.058**, **Mean Absolute Error (MAE)** sebesar **0.186**, dan **Root Mean Squared Error (RMSE)** sebesar **0.242**. Metrik-metrik ini menunjukkan bahwa sistem hybrid memiliki performa yang sangat baik dalam memprediksi nilai relevansi game berdasarkan data yang digunakan.
+
+Perhitungan metrik-metrik ini dilakukan dengan membandingkan prediksi model terhadap data aktual, kemudian menghitung rata-rata error menggunakan formula MSE, MAE, dan RMSE.
+
 ## Kesimpulan
 
 1. EDA pada dataset rekomendasi membantu memahami pola, membersihkan data, dan mengevaluasi fitur yang relevan seperti genre, rating, dan platform.
 2. Dalam pengembangan sistem rekomendasi game, pendekatan Content-based Filtering menggunakan fitur seperti tags, deskripsi, dan data historis pengguna memungkinkan rekomendasi yang lebih personal.
 3. Hybrid Filtering menjadi solusi optimal dengan mengintegrasikan Content-based dan Collaborative Filtering untuk mengatasi keterbatasan seperti cold-start problem.
-4. Efektivitas sistem rekomendasi diukur menggunakan metrik seperti Precision, Recall, F1-Score, MAE, dan RMSE, yang memastikan hasil akurat dan sesuai kebutuhan pengguna.
+4. Efektivitas sistem rekomendasi diukur menggunakan metrik seperti Precision, Recall, MAE, dan RMSE, yang memastikan hasil akurat dan sesuai kebutuhan pengguna.
 5. Sistem rekomendasi yang mempertimbangkan fitur seperti tags, deskripsi, platform, dan rating memberikan rekomendasi yang relevan dan kompatibel dengan preferensi serta perangkat pengguna.
 
 ## Referensi
 
-1. Mulachela, A., Rizki, K., & Wahyuddin, Y. A. (2020). Analisis Perkembangan Industri Game di Indonesia Melalui Pendekatan Rantai Nilai Global (Global Value Chain). _Indonesian Journal of Global Discourse, 2_(2), 32-51. Retrieved from [Link](https://jtiik.ub.ac.id/index.php/jtiik/article/view/8503).
+1. Mulachela, A., Rizki, K., & Wahyuddin, Y. A. (2020). Analisis Perkembangan Industri Game di Indonesia Melalui Pendekatan Rantai Nilai Global (Global Value Chain). *Indonesian Journal of Global Discourse*, 2(2), 32-51. Retrieved from [Link](https://jtiik.ub.ac.id/index.php/jtiik/article/view/8503).
 
-2. Syamkalla, M. T., Khomsah, S., & Nur, Y. S. R. (2024). Implementasi Algoritma Catboost Dan Shapley Additive Explanations (SHAP) Dalam Memprediksi Popularitas Game Indie Pada Platform Steam. _Jurnal Teknologi Informasi dan Ilmu Komputer, 11_(4), 777-786. Retrieved from [Link](https://ejournal.bsi.ac.id/ejurnal/index.php/ti/article/view/11462).
+2. Syamkalla, M. T., Khomsah, S., & Nur, Y. S. R. (2024). Implementasi Algoritma Catboost Dan Shapley Additive Explanations (SHAP) Dalam Memprediksi Popularitas Game Indie Pada Platform Steam. *Jurnal Teknologi Informasi dan Ilmu Komputer, 11* (4), 777-786. Retrieved from [Link](https://ejournal.bsi.ac.id/ejurnal/index.php/ti/article/view/11462).
 
-3. Ricci, F., Rokach, L., & Shapira, B. (2011). Introduction to Recommender Systems Handbook. In _Recommender Systems Handbook_ (pp. 1-35). Springer. Retrieved from [Link](https://link.springer.com/chapter/10.1007/978-0-387-85820-3_1).
+3. Ricci, F., Rokach, L., & Shapira, B. (2011). Introduction to Recommender Systems Handbook. In *Recommender Systems Handbook* (pp. 1-35). Springer. Retrieved from [Link](https://link.springer.com/chapter/10.1007/978-0-387-85820-3_1).
 
-4. Resnick, P., Iacovou, N., Suchak, M., Bergstrom, P., & Riedl, J. (1994). GroupLens: An Open Architecture for Collaborative Filtering of Netnews. In _Proceedings of the 1994 ACM Conference on Computer Supported Cooperative Work_ (pp. 175-186). ACM. Retrieved from [Link](https://dl.acm.org/doi/10.1145/192844.192905).
+4. Resnick, P., Iacovou, N., Suchak, M., Bergstrom, P., & Riedl, J. (1994). GroupLens: An Open Architecture for Collaborative Filtering of Netnews. In *Proceedings of the 1994 ACM Conference on Computer Supported Cooperative Work* (pp. 175-186). ACM. Retrieved from [Link](https://dl.acm.org/doi/10.1145/192844.192905).
 
-5. Burke, R. (2002). Hybrid Recommender Systems: Survey and Experiments. _User Modeling and User-Adapted Interaction, 12_(4), 331-370. Retrieved from [Link](https://link.springer.com/article/10.1023/A:1021240730564).
+5. Burke, R. (2002). Hybrid Recommender Systems: Survey and Experiments. *User Modeling and User-Adapted Interaction, 12* (4), 331-370. Retrieved from [Link](https://link.springer.com/article/10.1023/A:1021240730564).
 
 <!-- markdownlint-disable MD033 -->
 </div>
